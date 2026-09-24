@@ -147,6 +147,9 @@ type Employees
     define role_chain: role_direct or role_chain from direct_replaces
     define role: role_chain
 
+    # Записи замещений
+    define replacing_record: [Replacings]
+
 
 # ==============================================================================
 # 5. Roles (роли и права)
@@ -176,3 +179,24 @@ type Roles
     define can_use_direct: assignee_direct
     define can_use_chain: assignee_chain
     define can_use: assignee
+
+
+# ==============================================================================
+# 6. Replacings (замещения сотрудников)
+# ==============================================================================
+type Replacings
+  relations
+    # Сотрудник, которого замещают (от кого переходят полномочия)
+    define replaced: [Employees]
+
+    # Сотрудник, который замещает (кто исполняет обязанности)
+    define replacing: [Employees]
+
+    # Штатная должность, по которой оформлено замещение
+    define staff: [Staffs]
+
+    # Участники замещения
+    define member: replaced or replacing
+
+    # Целевое право на просмотр или использование
+    define can_use: member

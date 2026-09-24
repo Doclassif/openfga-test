@@ -73,7 +73,7 @@ export function buildTuplesFromCsv(csvDir = "./csv") {
     }
   }
 
-  // 4. Replacings (прямые связи замещения между сотрудниками)
+  // 4. Replacings (прямые связи замещения между сотрудниками и кортежи сущности Replacings)
   const replacings = parseCsv(`${dir}/replacings.csv`);
   for (const r of replacings) {
     const { id, staff_id, replaced_username, replacing_username } = r;
@@ -81,6 +81,18 @@ export function buildTuplesFromCsv(csvDir = "./csv") {
       // replacing_username замещает replaced_username
       tuples.push({ user: `Employees:${replaced_username}`, relation: "direct_replaces", object: `Employees:${replacing_username}` });
       tuples.push({ user: `Employees:${replacing_username}`, relation: "direct_substitute", object: `Employees:${replaced_username}` });
+    }
+    if (id) {
+      if (replaced_username) {
+        tuples.push({ user: `Employees:${replaced_username}`, relation: "replaced", object: `Replacings:${id}` });
+      }
+      if (replacing_username) {
+        tuples.push({ user: `Employees:${replacing_username}`, relation: "replacing", object: `Replacings:${id}` });
+        tuples.push({ user: `Replacings:${id}`, relation: "replacing_record", object: `Employees:${replacing_username}` });
+      }
+      if (staff_id) {
+        tuples.push({ user: `Staffs:${staff_id}`, relation: "staff", object: `Replacings:${id}` });
+      }
     }
   }
 

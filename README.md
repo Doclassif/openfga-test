@@ -19,27 +19,27 @@
 
 ---
 
-## 🔄 Замещения (Replacing) в модели: почему это не отдельный узел
+## 🔄 Замещения (Replacings) в модели OpenFGA и на графе
 
-В реляционных базах данных замещения хранятся в таблице-связке (`replacings.csv`). Однако в графовой модели OpenFGA:
-1. **Замещение встроено в модель `Employees` по дефолту**:
-   В OpenFGA нет отдельного типа `type Replacings`. Замещение смоделировано как **внутреннее отношение сотрудника к сотруднику (`Employees ➔ Employees`)**:
+Кадровые приказы о замещении хранятся в таблице `replacings.csv` и представлены в системе на двух уровнях:
+
+1. **Сущность первого класса `Replacings` в модели и схеме**:
+   В `model.fga` и скомпилированном `model.json` тип `Replacings` явно объявлен:
    ```dsl
-   type Employees
+   type Replacings
      relations
-       define direct_replaces: [Employees]
-       define replaces_chain: direct_replaces or replaces_chain from direct_replaces
-       define replaces: replaces_chain
-
-       define direct_substitute: [Employees]
-       define substitute_chain: direct_substitute or substitute_chain from direct_substitute
-       define substitute: substitute_chain
+       define replaced: [Employees]
+       define replacing: [Employees]
+       define staff: [Staffs]
+       define member: replaced or replacing
+       define can_use: member
    ```
-2. **Отсутствие лишних транзитивных прыжков**:
-   Благодаря самозамыкающейся связи (`Employees ↺ replaces`) замещающий сотрудник напрямую наследует связанные отделы, штатки, профессии и роли замещаемого лица (`division_from_replaced`, `staff_from_replaced`, `role_from_replaced`).
-3. **Отображение на графе**:
-   На схеме модели замещение отображается как петля самозамыкания на узле `Employees (↺ Замещения)`. В режиме трассировки конкретного запроса («Цепочка решения / Data Path») граф разворачивает замещения в наглядную пошаговую цепочку:
-   `[Employees:34491] ──(replaces)──> [Employees:42179] ──(direct_assignee)──> [Roles:c66452e0...]`.
+2. **Интерактивный граф строится напрямую из `model.json`**:
+   Граф в веб-интерфейсе динамически парсит структуру `model.json` и отображает **все 6 типов сущностей** (`Divisions`, `Staffs`, `Professions`, `Employees`, `Replacings`, `Roles`) с их актуальными связями и счетчиками строк.
+3. **Прямое транзитивное вычисление прав внутри `Employees`**:
+   Для исключения лишних промежуточных узлов при проверке прав доступа сотрудников (права на роли, штатки, подотделы), внутри типа `Employees` определены нативные самозамыкающиеся связи `direct_replaces` / `replaces_chain`, разыменовываемые ядром OpenFGA напрямую.
+4. **Отображение цепочек в режиме «Data Path»**:
+   В режиме «Цепочка решения (Data Path)» визуализируются конкретные задействованные сотрудники, ребро `replaces` и путь к целевой роли или отделу.
 
 ---
 
@@ -76,7 +76,7 @@ PORT=8000 npm start
 ```bash
 npm test
 ```
-Запускает **79 комплексных тестов** на нативном раннере `node:test` (17 групп проверок, 100% pass rate).
+Запускает **84 комплексных теста** на нативном раннере `node:test` (18 групп проверок, 100% pass rate).
 
 ---
 
@@ -98,7 +98,7 @@ npm test
 |---|---|
 | `npm start` | Запуск HTTP-сервера приложения |
 | `npm run dev` | Запуск сервера в режиме разработки с флагом `--watch` |
-| `npm test` | Запуск полного набора автотестов (`node:test`, 79 проверок) |
+| `npm test` | Запуск полного набора автотестов (`node:test`, 84 проверки) |
 | `npm run import` | Инициализация хранилища OpenFGA, загрузка модели и импорт CSV |
 | `npm run model:json` | Компиляция `model.fga` в AST JSON `model.json` через OpenFGA CLI |
 

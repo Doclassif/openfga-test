@@ -609,5 +609,48 @@ test("17. Native ReBAC & Contextual API: все цепочки вычисляю�
   });
 });
 
+test("18. Replacings Entity: первый класс сущности в OpenFGA, model.json и графе", async (t) => {
+  await t.test("ALLOW REPLACING: Замещающий 34491 имеет доступ к записи замещения 73442", async () => {
+    const allowed = await check("Employees:34491", "can_use", "Replacings:73442");
+    assert.equal(allowed, true);
+  });
+
+  await t.test("ALLOW REPLACED: Замещаемый 42179 имеет доступ к записи замещения 73442", async () => {
+    const allowed = await check("Employees:42179", "can_use", "Replacings:73442");
+    assert.equal(allowed, true);
+  });
+
+  await t.test("DENY STRANGER: Посторонний сотрудник 68997 не имеет доступа к чужому замещению", async () => {
+    const allowed = await check("Employees:68997", "can_use", "Replacings:73442");
+    assert.equal(allowed, false);
+  });
+
+  await t.test("TRACE: Построение трассировки графа для сущности Replacings", () => {
+    const tables = {
+      divisions: parseCsv("./csv/divisions.csv"),
+      professions: parseCsv("./csv/professions.csv"),
+      staffs: parseCsv("./csv/staffs.csv"),
+      employees: parseCsv("./csv/employees.csv"),
+      replacings: parseCsv("./csv/replacings.csv"),
+      roles: parseCsv("./csv/roles.csv")
+    };
+    const trace = traceResolutionPath({
+      type: "check",
+      user: "Employees:34491",
+      relation: "can_use",
+      object: "Replacings:73442",
+      allowed: true
+    }, tables);
+
+    assert.equal(trace.allowed, true);
+    assert.equal(trace.nodes.length, 2);
+    assert.equal(trace.nodes[0].id, "Employees:34491");
+    assert.equal(trace.nodes[1].id, "Replacings:73442");
+    assert.equal(trace.edges[0].relation, "replacing");
+    assert.equal(trace.modelSteps[0].from, "Employees");
+    assert.equal(trace.modelSteps[0].to, "Replacings");
+  });
+});
+
 
 

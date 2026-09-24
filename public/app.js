@@ -26,6 +26,10 @@
         const prof = (tables.professions || []).find(p => String(p.code) === String(cleanId));
         return prof ? `${cleanId} — ${prof.name}` : cleanId;
       }
+      if (type === "Replacings") {
+        const rep = (tables.replacings || []).find(r => String(r.id) === String(cleanId));
+        return rep ? `Замещение ${cleanId} (${rep.replacing_username} ➔ ${rep.replaced_username})` : `Замещение ${cleanId}`;
+      }
 
       return cleanId;
     }
@@ -91,6 +95,18 @@
         });
         if (defaultValue && Array.from(sel.options).some(o => o.value === defaultValue)) {
           sel.value = defaultValue;
+        }
+      } else if (type === "Replacings") {
+        (tables.replacings || []).forEach(rep => {
+          const opt = document.createElement("option");
+          opt.value = `Replacings:${rep.id}`;
+          opt.textContent = `Замещение ${rep.id} (${rep.replacing_username} ➔ ${rep.replaced_username})`;
+          sel.appendChild(opt);
+        });
+        if (defaultValue && Array.from(sel.options).some(o => o.value === defaultValue)) {
+          sel.value = defaultValue;
+        } else if ((tables.replacings || []).length > 0) {
+          sel.value = `Replacings:${tables.replacings[0].id}`;
         }
       }
     }
@@ -499,6 +515,10 @@
         else if (rel === "substitute_chain") label = `substitute_chain (Все замещающие по всей цепочке)`;
         else if (rel === "substitute") label = `substitute (Кто замещает)`;
         else if (rel === "role") label = `role (Целевая роль)`;
+        else if (rel === "replaced") label = `replaced (Замещаемый сотрудник)`;
+        else if (rel === "replacing") label = `replacing (Замещающий сотрудник)`;
+        else if (rel === "member") label = `member (Участники замещения: replaced / replacing)`;
+        else if (rel === "replacing_record") label = `replacing_record (Связь с записью замещения)`;
         else label = `${rel} (Отношение модели model.json)`;
 
         items.push({ value: rel, label });
@@ -796,6 +816,10 @@
           const res = await fetch(`${API_BASE}/model`);
           if (res.ok) modelJson = await res.json();
         } catch (e) {}
+      }
+
+      if (modelJson) {
+        buildModelGraphFromJson(modelJson);
       }
 
       if (!modelFga) {
@@ -2352,93 +2376,153 @@
     }
 
     // -------------------------------------------------------------
-    // ИНТЕРАКТИВНЫЙ ГРАФ МОДЕЛИ OPENFGA И ВИЗУАЛИЗАЦИЯ ПУТИ
+    // ИНТЕРАКТИВНЫЙ ГРАФ МОДЕЛИ OPENFGA НА ОСНОВЕ MODEL.JSON
     // -------------------------------------------------------------
-    const MODEL_GRAPH_NODES = {
-      Divisions:   { id: "Divisions",   x: 200, y: 110, label: "Divisions",   sub: "Подразделения",   color: "#8b5cf6" },
-      Staffs:      { id: "Staffs",      x: 490, y: 110, label: "Staffs",      sub: "Штатные единицы", color: "#06b6d4" },
-      Professions: { id: "Professions", x: 780, y: 110, label: "Professions", sub: "Профессии",       color: "#10b981" },
-      Employees:   { id: "Employees",   x: 280, y: 380, label: "Employees",   sub: "Сотрудники (↺ Замещения)", color: "#3b82f6" },
-      Roles:       { id: "Roles",       x: 700, y: 380, label: "Roles",       sub: "Роли доступа",    color: "#f59e0b" }
+    const MODEL_NODE_METADATA = {
+      Divisions:   { x: 180, y: 100, label: "Divisions",   sub: "Подразделения",   color: "#8b5cf6" },
+      Staffs:      { x: 490, y: 100, label: "Staffs",      sub: "Штатные единицы", color: "#06b6d4" },
+      Professions: { x: 800, y: 100, label: "Professions", sub: "Профессии",       color: "#10b981" },
+      Employees:   { x: 180, y: 380, label: "Employees",   sub: "Сотрудники",      color: "#3b82f6" },
+      Replacings:  { x: 490, y: 380, label: "Replacings",  sub: "Замещения",       color: "#ec4899" },
+      Roles:       { x: 800, y: 380, label: "Roles",       sub: "Роли доступа",    color: "#f59e0b" }
     };
 
-    const MODEL_GRAPH_EDGES = [
-      {
-        id: "divisions-staffs",
-        from: "Divisions", to: "Staffs", relation: "direct_staff", label: "direct_staff",
-        getPath: () => ({ d: "M 270 100 L 420 100", lx: 345, ly: 88 })
-      },
-      {
-        id: "staffs-divisions",
-        from: "Staffs", to: "Divisions", relation: "division", label: "division",
-        getPath: () => ({ d: "M 420 120 L 270 120", lx: 345, ly: 135 })
-      },
-      {
-        id: "staffs-professions",
-        from: "Staffs", to: "Professions", relation: "profession", label: "profession",
-        getPath: () => ({ d: "M 560 100 L 710 100", lx: 635, ly: 88 })
-      },
-      {
-        id: "professions-staffs",
-        from: "Professions", to: "Staffs", relation: "staff", label: "staff",
-        getPath: () => ({ d: "M 710 120 L 560 120", lx: 635, ly: 135 })
-      },
-      {
-        id: "divisions-divisions",
-        from: "Divisions", to: "Divisions", relation: "descendant", label: "descendant", isSelfLoop: true,
-        getPath: () => ({ d: "M 130 100 C 60 40, 60 180, 130 120", lx: 75, ly: 110 })
-      },
-      {
-        id: "divisions-employees",
-        from: "Divisions", to: "Employees", relation: "direct_employee", label: "direct_employee",
-        getPath: () => ({ d: "M 210 134 L 260 356", lx: 220, ly: 245 })
-      },
-      {
-        id: "employees-divisions",
-        from: "Employees", to: "Divisions", relation: "can_use", label: "can_use / division",
-        getPath: () => ({ d: "M 240 356 Q 160 250 190 134", lx: 180, ly: 245 })
-      },
-      {
-        id: "staffs-employees",
-        from: "Staffs", to: "Employees", relation: "employee", label: "employee",
-        getPath: () => ({ d: "M 460 134 L 310 356", lx: 375, ly: 235 })
-      },
-      {
-        id: "employees-staffs",
-        from: "Employees", to: "Staffs", relation: "staff", label: "staff",
-        getPath: () => ({ d: "M 330 356 Q 420 260 480 134", lx: 415, ly: 255 })
-      },
-      {
-        id: "employees-employees",
-        from: "Employees", to: "Employees", relation: "replaces", label: "replaces / substitute", isSelfLoop: true,
-        getPath: () => ({ d: "M 210 370 C 130 310, 130 450, 210 390", lx: 145, ly: 380 })
-      },
-      {
-        id: "employees-roles",
-        from: "Employees", to: "Roles", relation: "can_use", label: "can_use / assignee",
-        getPath: () => ({ d: "M 350 370 L 630 370", lx: 490, ly: 358 })
-      },
-      {
-        id: "roles-employees",
-        from: "Roles", to: "Employees", relation: "direct_assignee", label: "direct_assignee",
-        getPath: () => ({ d: "M 630 390 L 350 390", lx: 490, ly: 405 })
-      },
-      {
-        id: "staffs-roles",
-        from: "Staffs", to: "Roles", relation: "staff_assignee", label: "staff_assignee",
-        getPath: () => ({ d: "M 540 134 L 680 356", lx: 620, ly: 245 })
-      },
-      {
-        id: "divisions-roles",
-        from: "Divisions", to: "Roles", relation: "division_assignee", label: "division_assignee",
-        getPath: () => ({ d: "M 270 134 Q 480 300 640 360", lx: 480, ly: 315 })
-      },
-      {
-        id: "employees-professions",
-        from: "Employees", to: "Professions", relation: "direct_profession", label: "direct_profession",
-        getPath: () => ({ d: "M 350 365 Q 520 200 720 134", lx: 535, ly: 200 })
+    let MODEL_GRAPH_NODES = {};
+    let MODEL_GRAPH_EDGES = [];
+
+    function buildModelGraphFromJson(mj) {
+      const typeDefs = (mj && Array.isArray(mj.type_definitions)) ? mj.type_definitions : [];
+      const nodes = {};
+
+      if (typeDefs.length > 0) {
+        typeDefs.forEach((td, idx) => {
+          const typeName = td.type;
+          const meta = MODEL_NODE_METADATA[typeName] || {
+            x: 180 + (idx % 3) * 310,
+            y: idx < 3 ? 100 : 380,
+            label: typeName,
+            sub: typeName,
+            color: "#64748b"
+          };
+          nodes[typeName] = {
+            id: typeName,
+            x: meta.x,
+            y: meta.y,
+            label: meta.label,
+            sub: meta.sub,
+            color: meta.color
+          };
+        });
+      } else {
+        Object.keys(MODEL_NODE_METADATA).forEach(k => {
+          nodes[k] = { id: k, ...MODEL_NODE_METADATA[k] };
+        });
       }
-    ];
+
+      MODEL_GRAPH_NODES = nodes;
+
+      const candidateEdges = [
+        {
+          id: "divisions-staffs",
+          from: "Divisions", to: "Staffs", relation: "direct_staff", label: "direct_staff",
+          getPath: () => ({ d: "M 250 90 L 420 90", lx: 335, ly: 78 })
+        },
+        {
+          id: "staffs-divisions",
+          from: "Staffs", to: "Divisions", relation: "division", label: "division",
+          getPath: () => ({ d: "M 420 110 L 250 110", lx: 335, ly: 125 })
+        },
+        {
+          id: "staffs-professions",
+          from: "Staffs", to: "Professions", relation: "profession", label: "profession",
+          getPath: () => ({ d: "M 560 90 L 730 90", lx: 645, ly: 78 })
+        },
+        {
+          id: "professions-staffs",
+          from: "Professions", to: "Staffs", relation: "staff", label: "staff",
+          getPath: () => ({ d: "M 730 110 L 560 110", lx: 645, ly: 125 })
+        },
+        {
+          id: "divisions-divisions",
+          from: "Divisions", to: "Divisions", relation: "descendant", label: "descendant", isSelfLoop: true,
+          getPath: () => ({ d: "M 110 90 C 40 30, 40 170, 110 110", lx: 55, ly: 100 })
+        },
+        {
+          id: "divisions-employees",
+          from: "Divisions", to: "Employees", relation: "direct_employee", label: "direct_employee",
+          getPath: () => ({ d: "M 170 124 L 170 356", lx: 140, ly: 240 })
+        },
+        {
+          id: "employees-divisions",
+          from: "Employees", to: "Divisions", relation: "can_use", label: "can_use / division",
+          getPath: () => ({ d: "M 190 356 L 190 124", lx: 220, ly: 240 })
+        },
+        {
+          id: "staffs-employees",
+          from: "Staffs", to: "Employees", relation: "employee", label: "employee",
+          getPath: () => ({ d: "M 430 124 L 240 356", lx: 310, ly: 230 })
+        },
+        {
+          id: "employees-staffs",
+          from: "Employees", to: "Staffs", relation: "staff", label: "staff",
+          getPath: () => ({ d: "M 250 356 Q 360 270 450 124", lx: 375, ly: 270 })
+        },
+        {
+          id: "employees-employees",
+          from: "Employees", to: "Employees", relation: "replaces", label: "replaces / substitute", isSelfLoop: true,
+          getPath: () => ({ d: "M 110 370 C 40 310, 40 450, 110 390", lx: 55, ly: 380 })
+        },
+        {
+          id: "replacings-employees",
+          from: "Replacings", to: "Employees", relation: "replaced", label: "replaced / replacing",
+          getPath: () => ({ d: "M 420 370 L 250 370", lx: 335, ly: 358 })
+        },
+        {
+          id: "employees-replacings",
+          from: "Employees", to: "Replacings", relation: "replacing_record", label: "replacing_record",
+          getPath: () => ({ d: "M 250 390 L 420 390", lx: 335, ly: 405 })
+        },
+        {
+          id: "staffs-replacings",
+          from: "Staffs", to: "Replacings", relation: "staff", label: "staff",
+          getPath: () => ({ d: "M 490 124 L 490 356", lx: 515, ly: 240 })
+        },
+        {
+          id: "replacings-roles",
+          from: "Replacings", to: "Roles", relation: "can_use", label: "can_use / member",
+          getPath: () => ({ d: "M 560 370 L 730 370", lx: 645, ly: 358 })
+        },
+        {
+          id: "employees-roles",
+          from: "Employees", to: "Roles", relation: "can_use", label: "can_use / assignee",
+          getPath: () => ({ d: "M 250 404 Q 490 480 730 404", lx: 490, ly: 460 })
+        },
+        {
+          id: "roles-employees",
+          from: "Roles", to: "Employees", relation: "direct_assignee", label: "direct_assignee",
+          getPath: () => ({ d: "M 730 390 Q 490 440 250 390", lx: 490, ly: 425 })
+        },
+        {
+          id: "staffs-roles",
+          from: "Staffs", to: "Roles", relation: "staff_assignee", label: "staff_assignee",
+          getPath: () => ({ d: "M 550 124 L 740 356", lx: 670, ly: 230 })
+        },
+        {
+          id: "divisions-roles",
+          from: "Divisions", to: "Roles", relation: "division_assignee", label: "division_assignee",
+          getPath: () => ({ d: "M 250 120 Q 500 240 730 360", lx: 500, ly: 215 })
+        },
+        {
+          id: "employees-professions",
+          from: "Employees", to: "Professions", relation: "direct_profession", label: "direct_profession",
+          getPath: () => ({ d: "M 250 365 Q 520 200 730 124", lx: 535, ly: 180 })
+        }
+      ];
+
+      MODEL_GRAPH_EDGES = candidateEdges.filter(e => nodes[e.from] && nodes[e.to]);
+    }
+
+    buildModelGraphFromJson(modelJson || (typeof window !== "undefined" && window.__MODEL_DATA__));
 
     let currentGraphMode = "model";
     let currentTrace = null;
@@ -2713,6 +2797,9 @@
     function drawGraph() {
       const svg = document.getElementById("graphSvg");
       if (!svg) return;
+      if (modelJson && (!MODEL_GRAPH_NODES.Replacings || Object.keys(MODEL_GRAPH_NODES).length < 6)) {
+        buildModelGraphFromJson(modelJson);
+      }
       if (currentGraphMode === "model") {
         renderModelGraph(svg, currentTrace);
       } else {
@@ -2721,6 +2808,13 @@
     }
 
     function onModelNodeClick(type) {
+      if (type === "Replacings") {
+        const tableSel = document.getElementById("tableSelect");
+        if (tableSel) {
+          tableSel.value = "replacings";
+          renderCurrentTable();
+        }
+      }
       switchTab("lookup");
       const typeSel = document.getElementById("lookupEntityType");
       if (typeSel) {
@@ -2907,6 +3001,28 @@
     };
 
     const isFirstOnly = (relation === "can_use_direct" || relation === "assignee_direct" || relation === "employee_direct" || relation === "substitute_direct_assignee" || relation === "substitute_direct_employee");
+
+    // 1.0 Сотрудник -> Замещение (Replacings)
+    if (uType === "Employees" && oType === "Replacings") {
+      const rep = replacings.find(r => String(r.id) === oId);
+      if (rep && (rep.replaced_username === uId || rep.replacing_username === uId)) {
+        const isReplacing = (rep.replacing_username === uId);
+        return {
+          allowed: true,
+          nodes: [
+            { id: user, type: "Employees", label: getEmpLabel(uId), roleTag: isReplacing ? "Замещающий" : "Замещаемый" },
+            { id: object, type: "Replacings", label: getReplacingLabel(oId), roleTag: "Запись замещения" }
+          ],
+          edges: [
+            { from: user, to: object, relation: isReplacing ? "replacing" : "replaced", step: 1 }
+          ],
+          modelSteps: [
+            { from: "Employees", to: "Replacings", relation: isReplacing ? "replacing" : "replaced" }
+          ],
+          summary: `${uId} ➔ [${isReplacing ? "replacing" : "replaced"}] ➔ ${getReplacingLabel(oId)}`
+        };
+      }
+    }
 
     // 1.1 Сотрудник -> Роль
     if (uType === "Employees" && oType === "Roles") {

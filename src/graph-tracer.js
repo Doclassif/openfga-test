@@ -177,6 +177,28 @@ export function traceResolutionPath(params, tables = {}) {
 
     const isFirstOnly = (relation === "can_use_direct" || relation === "assignee_direct" || relation === "employee_direct" || relation === "substitute_direct_assignee" || relation === "substitute_direct_employee");
 
+    // 1.0 Сотрудник -> Замещение (Replacings)
+    if (uType === "Employees" && oType === "Replacings") {
+      const rep = replacings.find(r => String(r.id) === oId);
+      if (rep && (rep.replaced_username === uId || rep.replacing_username === uId)) {
+        const isReplacing = (rep.replacing_username === uId);
+        return {
+          allowed: true,
+          nodes: [
+            { id: user, type: "Employees", label: getEmpLabel(uId), roleTag: isReplacing ? "Замещающий" : "Замещаемый" },
+            { id: object, type: "Replacings", label: getReplacingLabel(oId), roleTag: "Запись замещения" }
+          ],
+          edges: [
+            { from: user, to: object, relation: isReplacing ? "replacing" : "replaced", step: 1 }
+          ],
+          modelSteps: [
+            { from: "Employees", to: "Replacings", relation: isReplacing ? "replacing" : "replaced" }
+          ],
+          summary: `${uId} ➔ [${isReplacing ? "replacing" : "replaced"}] ➔ ${getReplacingLabel(oId)}`
+        };
+      }
+    }
+
     // 1.1 Сотрудник -> Роль
     if (uType === "Employees" && oType === "Roles") {
       const isRegular = roles.some(r => r.id === oId && r.username === uId);
