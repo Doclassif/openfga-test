@@ -1712,10 +1712,10 @@
         { correlation_id: "check-3-sub-canuse-allow", user: "Employees:34491", relation: "can_use", object: "Divisions:755" },
         { correlation_id: "check-4-sub-own-direct-allow", user: "Employees:34491", relation: "direct_employee", object: "Divisions:215" }
       ],
-      rolesAndGrants: [
+      rolesAndSubstitutions: [
         { correlation_id: "check-1-role-by-replacing", user: "Employees:34491", relation: "can_use", object: "Roles:c66452e0-23c5-5cbf-97fa-07b1480465dc" },
         { correlation_id: "check-2-role-direct-denied", user: "Employees:34491", relation: "direct_assignee", object: "Roles:c66452e0-23c5-5cbf-97fa-07b1480465dc" },
-        { correlation_id: "check-3-role-by-grant", user: "Employees:42179", relation: "can_use", object: "Roles:a684fc77-d2c4-5809-943c-ef5a800b78fb" },
+        { correlation_id: "check-3-role-chain-level2", user: "Employees:34491", relation: "can_use_chain", object: "Roles:bd38f78f-7ad0-595e-81d6-06b970a7e9c3" },
         { correlation_id: "check-4-role-stranger-denied", user: "Employees:68997", relation: "can_use", object: "Roles:c66452e0-23c5-5cbf-97fa-07b1480465dc" }
       ]
     };
@@ -1731,7 +1731,7 @@
         default: "btnScenarioDefault",
         substitute34491: "btnScenarioSubstitute34491",
         canUseVsDirect: "btnScenarioCanUseVsDirect",
-        rolesAndGrants: "btnScenarioRolesAndGrants"
+        rolesAndSubstitutions: "btnScenarioRolesAndSubstitutions"
       };
       Object.keys(btnMap).forEach(k => {
         const btn = document.getElementById(btnMap[k]);
@@ -2358,7 +2358,7 @@
       Divisions:   { id: "Divisions",   x: 200, y: 110, label: "Divisions",   sub: "Подразделения",   color: "#8b5cf6" },
       Staffs:      { id: "Staffs",      x: 490, y: 110, label: "Staffs",      sub: "Штатные единицы", color: "#06b6d4" },
       Professions: { id: "Professions", x: 780, y: 110, label: "Professions", sub: "Профессии",       color: "#10b981" },
-      Employees:   { id: "Employees",   x: 280, y: 380, label: "Employees",   sub: "Сотрудники",      color: "#3b82f6" },
+      Employees:   { id: "Employees",   x: 280, y: 380, label: "Employees",   sub: "Сотрудники (↺ Замещения)", color: "#3b82f6" },
       Roles:       { id: "Roles",       x: 700, y: 380, label: "Roles",       sub: "Роли доступа",    color: "#f59e0b" }
     };
 
@@ -2410,7 +2410,7 @@
       },
       {
         id: "employees-employees",
-        from: "Employees", to: "Employees", relation: "replaces", label: "replaces", isSelfLoop: true,
+        from: "Employees", to: "Employees", relation: "replaces", label: "replaces / substitute", isSelfLoop: true,
         getPath: () => ({ d: "M 210 370 C 130 310, 130 450, 210 390", lx: 145, ly: 380 })
       },
       {

@@ -15,15 +15,14 @@ export { traceResolutionPath };
 
 const DEFAULT_PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-// Читаем все 7 таблиц
+// Читаем все 6 таблиц
 const tables = {
   divisions: parseCsv("./csv/divisions.csv"),
   professions: parseCsv("./csv/professions.csv"),
   staffs: parseCsv("./csv/staffs.csv"),
   employees: parseCsv("./csv/employees.csv"),
   replacings: parseCsv("./csv/replacings.csv"),
-  roles: parseCsv("./csv/roles.csv"),
-  grants: parseCsv("./csv/grants.csv")
+  roles: parseCsv("./csv/roles.csv")
 };
 
 function readBody(req) {
@@ -57,15 +56,13 @@ export async function resolveAccessDetails(user, relation, object, allowed, ctx)
           check(user, "direct_assignee", object, ctx),
           check(user, "substitute_assignee", object, ctx)
         ]);
-        const grant = (tables.grants || []).find(g => g.target_id === rawObject && g.grantee_id === rawUser);
-        const isGrant = Boolean(grant);
-        breakdown = { direct: isDirect, substitute: isSub, grant: isGrant };
+        breakdown = { direct: isDirect, substitute: isSub };
 
         if (allowed) {
           if (isSub && !isDirect) {
             source = "substitute";
           } else if (isDirect && !isSub) {
-            source = isGrant ? "grant" : "direct";
+            source = "direct";
           } else if (isDirect && isSub) {
             source = "direct+substitute";
           }
@@ -102,8 +99,6 @@ export async function resolveAccessDetails(user, relation, object, allowed, ctx)
             explanation = hasChain
               ? `✓ ДОСТУП ПО ЦЕПОЧКЕ ЗАМЕЩЕНИЙ: ${substitution.reason}`
               : `✓ ДОСТУП РАЗРЕШЕН ПО ЗАМЕЩЕНИЮ: ${substitution.reason}`;
-          } else if (isGrant) {
-            explanation = "✓ ДОСТУП РАЗРЕШЕН ПО ГРАНТУ: Роль назначена через ручной грант / приказ.";
           } else if (isDirect) {
             explanation = "✓ ДОСТУП РАЗРЕШЕН НАПРЯМУЮ: Роль назначена сотруднику лично.";
           }
@@ -176,8 +171,8 @@ export async function resolveAccessDetails(user, relation, object, allowed, ctx)
             source = "substitute";
             explanation = "✓ ИСПОЛНЕНИЕ ПО ЗАМЕЩЕНИЮ: Сотрудник исполняет данную штатную позицию по замещению основного сотрудника.";
           } else {
-            source = "grant";
-            explanation = "✓ ДОСТУП К ШТАТКЕ: Доступ предоставлен через ручной грант.";
+            source = "context";
+            explanation = "✓ ДОСТУП К ШТАТКЕ: Доступ предоставлен через контекстные кортежи / модель.";
           }
         } else {
           explanation = "✗ ДОСТУП ЗАПРЕЩЕН: Сотрудник не занимает и не замещает данную штатную позицию.";

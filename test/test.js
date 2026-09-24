@@ -33,13 +33,13 @@ test("2. Professions: штатные единицы и профессии", asyn
   });
 
   await t.test("ARRAY: Профессии сотрудника 34491 (напрямую и через замещение)", async () => {
-    // По цепочке унаследованы профессии 5011 (от 42179), 4471 (грант 42179) и 5062 (от 53450)
+    // По цепочке унаследованы профессии 5011 (от 42179) и 5062 (от 53450)
     const profs = await listObjects("Employees:34491", "employee", "Professions");
-    assert.deepEqual(profs, ["3678", "4471", "5011", "5062"]);
+    assert.deepEqual(profs, ["3678", "5011", "5062"]);
 
-    // При проверке только 1-го уровня (employee_direct) — только своя, 42179 и грант 42179
+    // При проверке только 1-го уровня (employee_direct) — только своя (3678) и 42179 (5011)
     const directProfs = await listObjects("Employees:34491", "employee_direct", "Professions");
-    assert.deepEqual(directProfs, ["3678", "4471", "5011"]);
+    assert.deepEqual(directProfs, ["3678", "5011"]);
   });
 });
 
@@ -129,11 +129,9 @@ test("6. Roles: наследование ролей через замещени�
   });
 
   await t.test("ARRAY: Массив всех ролей сотрудника 34491", async () => {
-    // По цепочке: свои роли + роль c66452e0 замещаемого 42179 + роль a684fc77 (грант 42179) + роль bd38f78f замещаемого 53450
+    // По цепочке: своя роль (d04cd18e) + роль c66452e0 замещаемого 42179 + роль bd38f78f замещаемого 53450
     const roles = await listObjects("Employees:34491", "assignee", "Roles");
     assert.deepEqual(roles, [
-      "9a559752-b80a-503d-8cab-1c77cff5acae",
-      "a684fc77-d2c4-5809-943c-ef5a800b78fb",
       "bd38f78f-7ad0-595e-81d6-06b970a7e9c3",
       "c66452e0-23c5-5cbf-97fa-07b1480465dc",
       "d04cd18e-8ec4-5648-be93-e20946733d20"
@@ -142,29 +140,27 @@ test("6. Roles: наследование ролей через замещени�
     // При ограничении 1-м уровнем (assignee_direct) — без роли 53450
     const directRoles = await listObjects("Employees:34491", "assignee_direct", "Roles");
     assert.deepEqual(directRoles, [
-      "9a559752-b80a-503d-8cab-1c77cff5acae",
-      "a684fc77-d2c4-5809-943c-ef5a800b78fb",
       "c66452e0-23c5-5cbf-97fa-07b1480465dc",
       "d04cd18e-8ec4-5648-be93-e20946733d20"
     ]);
   });
 });
 
-test("7. Grants: ручные исключения и прямые назначения ролей", async (t) => {
-  const grantRoleId = "a684fc77-d2c4-5809-943c-ef5a800b78fb";
+test("7. Roles & Substitutions: прямые назначения ролей и их наследование по замещению", async (t) => {
+  const roleId = "c66452e0-23c5-5cbf-97fa-07b1480465dc"; // Роль сотрудника 42179
 
-  await t.test("ALLOW: Сотрудник 42179 получил роль через ручной грант", async () => {
-    const allowed = await check("Employees:42179", "assignee", `Roles:${grantRoleId}`);
+  await t.test("ALLOW: Сотрудник 42179 имеет роль напрямую", async () => {
+    const allowed = await check("Employees:42179", "assignee", `Roles:${roleId}`);
     assert.equal(allowed, true);
   });
 
   await t.test("DENY: Другой сотрудник 68997 НЕ имеет этой роли", async () => {
-    const allowed = await check("Employees:68997", "assignee", `Roles:${grantRoleId}`);
+    const allowed = await check("Employees:68997", "assignee", `Roles:${roleId}`);
     assert.equal(allowed, false);
   });
 
-  await t.test("CHAIN ALLOW: Замещающий 34491 унаследовал роль заменяемого, полученную по гранту", async () => {
-    const allowed = await check("Employees:34491", "assignee", `Roles:${grantRoleId}`);
+  await t.test("CHAIN ALLOW: Замещающий 34491 унаследовал роль заменяемого сотрудника 42179", async () => {
+    const allowed = await check("Employees:34491", "assignee", `Roles:${roleId}`);
     assert.equal(allowed, true);
   });
 });
@@ -288,7 +284,6 @@ test("11. Substitution Access: проверка прав с учетом зам�
     assert.equal(details.source, "substitute");
     assert.equal(details.breakdown.direct, false);
     assert.equal(details.breakdown.substitute, true);
-    assert.equal(details.breakdown.grant, false);
     assert.ok(details.substitution.is_substitute);
     assert.equal(details.substitution.replaced_users[0].username, "42179");
     assert.ok(details.explanation.includes("Сотрудник 42179"));
@@ -402,8 +397,7 @@ test("15. Graph Tracer: трассировка путей разрешения �
     staffs: parseCsv("./csv/staffs.csv"),
     employees: parseCsv("./csv/employees.csv"),
     replacings: parseCsv("./csv/replacings.csv"),
-    roles: parseCsv("./csv/roles.csv"),
-    grants: parseCsv("./csv/grants.csv")
+    roles: parseCsv("./csv/roles.csv")
   };
 
   await t.test("CHECK TRACE: замещающий 34491 строит путь через 42179 к роли c66452e0", () => {
@@ -513,9 +507,9 @@ test("15. Graph Tracer: трассировка путей разрешения �
       type: "check",
       user: "Employees:68997",
       relation: "can_use",
-      object: "Roles:0487bdfa-a05c-5184-8e56-0e76513b7715",
+      object: "Roles:c66452e0-23c5-5cbf-97fa-07b1480465dc",
       contextualTuples: [
-        { user: "Employees:68997", relation: "direct_substitute", object: "Employees:30634" }
+        { user: "Employees:68997", relation: "direct_substitute", object: "Employees:42179" }
       ],
       allowed: true
     }, tables);
@@ -523,8 +517,8 @@ test("15. Graph Tracer: трассировка путей разрешения �
     assert.equal(trace.allowed, true);
     assert.equal(trace.nodes.length, 3);
     assert.equal(trace.nodes[0].id, "Employees:68997");
-    assert.equal(trace.nodes[1].id, "Employees:30634");
-    assert.equal(trace.nodes[2].id, "Roles:0487bdfa-a05c-5184-8e56-0e76513b7715");
+    assert.equal(trace.nodes[1].id, "Employees:42179");
+    assert.equal(trace.nodes[2].id, "Roles:c66452e0-23c5-5cbf-97fa-07b1480465dc");
     assert.equal(trace.edges[0].relation, "replaces");
     assert.equal(trace.edges[1].relation, "direct_assignee");
   });
@@ -571,42 +565,42 @@ test("16. Chain Substitution & Depth Choice: выбор 1-го уровня vs �
   });
 });
 
-test("17. Native Grants & Substitutions: все вершины в цепочках проверяются через прямые и замещающие связи", async (t) => {
-  await t.test("DIVISIONS: Сотрудник 47168 имеет подразделение 374, выданное по гранту", async () => {
-    const hasDiv = await check("Employees:47168", "can_use", "Divisions:374");
+test("17. Native ReBAC & Contextual API: все цепочки вычисляются OpenFGA напрямую без промежуточной обработки", async (t) => {
+  await t.test("DIVISIONS: Сотрудник 42179 имеет доступ к своему подразделению 755 напрямую", async () => {
+    const hasDiv = await check("Employees:42179", "can_use", "Divisions:755");
     assert.equal(hasDiv, true);
   });
 
-  await t.test("STAFFS: Сотрудник 38574 занимает должность (штатку) 10071, выданную по гранту", async () => {
-    const hasStaff = await check("Employees:38574", "can_use", "Staffs:10071");
+  await t.test("STAFFS: Замещающий 34491 имеет доступ к штатке 17363 замещаемого сотрудника 42179", async () => {
+    const hasStaff = await check("Employees:34491", "can_use", "Staffs:17363");
     assert.equal(hasStaff, true);
   });
 
-  await t.test("PROFESSIONS: Сотрудник 37015 имеет профессию 1010, выданную по гранту", async () => {
-    const hasProf = await check("Employees:37015", "can_use", "Professions:1010");
+  await t.test("PROFESSIONS: Замещающий 34491 имеет доступ к профессии 5011 замещаемого сотрудника 42179", async () => {
+    const hasProf = await check("Employees:34491", "can_use", "Professions:5011");
     assert.equal(hasProf, true);
   });
 
-  await t.test("CHAIN ROLES VIA GRANT: Замещающий 34491 наследует роль a684fc77, выданную 42179 по гранту", async () => {
-    const roleId = "a684fc77-d2c4-5809-943c-ef5a800b78fb";
+  await t.test("CHAIN ROLES: Замещающий 34491 наследует роль bd38f78f по цепочке 2-го уровня", async () => {
+    const roleId = "bd38f78f-7ad0-595e-81d6-06b970a7e9c3";
     const allowed = await check("Employees:34491", "can_use", `Roles:${roleId}`);
     assert.equal(allowed, true);
   });
 
-  await t.test("CHAIN PROFESSIONS VIA GRANT: Замещающий 34491 наследует профессию 4471, выданную 42179 по гранту", async () => {
-    const allowed = await check("Employees:34491", "can_use", "Professions:4471");
+  await t.test("CHAIN DIVISIONS: Замещающий 34491 имеет доступ к отделу 647 по цепочке 2-го уровня", async () => {
+    const allowed = await check("Employees:34491", "can_use", "Divisions:647");
     assert.equal(allowed, true);
   });
 
   await t.test("DYNAMIC API CONTEXTUAL TUPLE: Временное замещение на лету без изменения БД", async () => {
-    const targetRole = "Roles:0487bdfa-a05c-5184-8e56-0e76513b7715"; // принадлежит 30634
+    const targetRole = "Roles:c66452e0-23c5-5cbf-97fa-07b1480465dc"; // принадлежит 42179
     // Без контекста - запрещено
     assert.equal(await check("Employees:68997", "can_use", targetRole), false);
 
     // С контекстным кортежем замещения в API
     const allowedWithContext = await check("Employees:68997", "can_use", targetRole, [
-      { user: "Employees:30634", relation: "direct_replaces", object: "Employees:68997" },
-      { user: "Employees:68997", relation: "direct_substitute", object: "Employees:30634" }
+      { user: "Employees:42179", relation: "direct_replaces", object: "Employees:68997" },
+      { user: "Employees:68997", relation: "direct_substitute", object: "Employees:42179" }
     ]);
     assert.equal(allowedWithContext, true);
 

@@ -95,29 +95,6 @@ export function buildTuplesFromCsv(csvDir = "./csv") {
     }
   }
 
-  // 6. Grants (прямые целевые кортежи назначений и исключений)
-  const grants = parseCsv(`${dir}/grants.csv`);
-  for (const r of grants) {
-    const { id, grantee_type, grantee_id, target_type, target_id } = r;
-    if (grantee_type === "Employees" && target_type === "Roles") {
-      tuples.push({ user: `Employees:${grantee_id}`, relation: "direct_assignee", object: `Roles:${target_id}` });
-      tuples.push({ user: `Roles:${target_id}`, relation: "direct_role", object: `Employees:${grantee_id}` });
-    } else if (grantee_type === "Employees" && target_type === "Divisions") {
-      tuples.push({ user: `Employees:${grantee_id}`, relation: "direct_employee", object: `Divisions:${target_id}` });
-      tuples.push({ user: `Divisions:${target_id}`, relation: "direct_division", object: `Employees:${grantee_id}` });
-    } else if (grantee_type === "Employees" && target_type === "Staffs") {
-      tuples.push({ user: `Employees:${grantee_id}`, relation: "direct_employee", object: `Staffs:${target_id}` });
-      tuples.push({ user: `Staffs:${target_id}`, relation: "direct_staff", object: `Employees:${grantee_id}` });
-    } else if (grantee_type === "Employees" && target_type === "Professions") {
-      tuples.push({ user: `Employees:${grantee_id}`, relation: "direct_employee", object: `Professions:${target_id}` });
-      tuples.push({ user: `Professions:${target_id}`, relation: "direct_profession", object: `Employees:${grantee_id}` });
-    } else if (grantee_type === "Staffs" && target_type === "Roles") {
-      tuples.push({ user: `Staffs:${grantee_id}`, relation: "staff_assignee", object: `Roles:${target_id}` });
-    } else if (grantee_type === "Divisions" && target_type === "Roles") {
-      tuples.push({ user: `Divisions:${grantee_id}`, relation: "division_assignee", object: `Roles:${target_id}` });
-    }
-  }
-
   // Дедупликация
   const seen = new Set();
   const uniqueTuples = [];

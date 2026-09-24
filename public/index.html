@@ -312,8 +312,8 @@
           <button type="button" class="batch-scenario-btn" id="btnScenarioCanUseVsDirect" onclick="loadBatchScenario('canUseVsDirect')">
             ⚖️ 3. can_use vs direct_employee
           </button>
-          <button type="button" class="batch-scenario-btn" id="btnScenarioRolesAndGrants" onclick="loadBatchScenario('rolesAndGrants')">
-            🔑 4. Роли и ручные гранты
+          <button type="button" class="batch-scenario-btn" id="btnScenarioRolesAndSubstitutions" onclick="loadBatchScenario('rolesAndSubstitutions')">
+            🔑 4. Роли и цепочки замещений
           </button>
         </div>
       </div>
@@ -467,7 +467,7 @@
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
         <div class="graph-segmented-control" id="graphModeControl">
           <button id="btnGraphModel" type="button" class="graph-segment-btn active" onclick="switchGraphMode('model')">
-            🕸️ Модель (7 сущностей)
+            🕸️ Схема модели (5 типов OpenFGA)
           </button>
           <button id="btnGraphEntity" type="button" class="graph-segment-btn" onclick="switchGraphMode('entity')">
             🔗 Цепочка решения (Data Path)
@@ -575,7 +575,6 @@
           <option value="staffs">Штатное расписание (staffs)</option>
           <option value="roles">Роли (roles)</option>
           <option value="replacings">Замещения (replacings)</option>
-          <option value="grants">Гранты (grants)</option>
         </select>
       </div>
 
