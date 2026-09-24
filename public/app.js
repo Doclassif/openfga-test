@@ -2046,9 +2046,7 @@
     }
 
     function onReadTabActivated() {
-      if (readCurrentTuples.length === 0) {
-        executeReadQuery(false);
-      }
+      updateLiveRequestPreview();
     }
 
     function onReadObjectTypeChange() {
@@ -2137,7 +2135,6 @@
         if (relInput) relInput.value = "";
       }
       updateLiveRequestPreview();
-      executeReadQuery(false);
     }
 
     async function executeReadQuery(isNextPage = false) {
