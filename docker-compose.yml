@@ -1,0 +1,14 @@
+services:
+  openfga:
+    image: openfga/openfga:latest
+    container_name: openfga
+    command: run
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=memory
+      - OPENFGA_PLAYGROUND_ENABLE=true
+    ports:
+      - "8088:8080" # HTTP API
+      - "8089:8081" # gRPC API
+      - "3001:3000" # Playground UI
+    restart: unless-stopped
+

@@ -1,0 +1,1085 @@
+{
+  "schema_version": "1.1",
+  "type_definitions": [
+    {
+      "metadata": {
+        "relations": {
+          "can_use": {},
+          "can_use_chain": {},
+          "can_use_direct": {},
+          "direct_employee": {
+            "directly_related_user_types": [
+              {
+                "type": "Employees"
+              }
+            ]
+          },
+          "employee": {},
+          "employee_chain": {},
+          "employee_direct": {},
+          "staff": {
+            "directly_related_user_types": [
+              {
+                "type": "Staffs"
+              }
+            ]
+          },
+          "staff_employee": {},
+          "staff_employee_direct": {},
+          "substitute_chain_employee": {},
+          "substitute_direct_employee": {},
+          "substitute_employee": {}
+        }
+      },
+      "relations": {
+        "can_use": {
+          "computedUserset": {
+            "relation": "employee"
+          }
+        },
+        "can_use_chain": {
+          "computedUserset": {
+            "relation": "employee_chain"
+          }
+        },
+        "can_use_direct": {
+          "computedUserset": {
+            "relation": "employee_direct"
+          }
+        },
+        "direct_employee": {
+          "this": {}
+        },
+        "employee": {
+          "computedUserset": {
+            "relation": "employee_chain"
+          }
+        },
+        "employee_chain": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_employee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "staff_employee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "substitute_chain_employee"
+                }
+              }
+            ]
+          }
+        },
+        "employee_direct": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_employee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "staff_employee_direct"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "substitute_direct_employee"
+                }
+              }
+            ]
+          }
+        },
+        "staff": {
+          "this": {}
+        },
+        "staff_employee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "employee"
+            },
+            "tupleset": {
+              "relation": "staff"
+            }
+          }
+        },
+        "staff_employee_direct": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "employee_direct"
+            },
+            "tupleset": {
+              "relation": "staff"
+            }
+          }
+        },
+        "substitute_chain_employee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "substitute_chain"
+            },
+            "tupleset": {
+              "relation": "direct_employee"
+            }
+          }
+        },
+        "substitute_direct_employee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "substitute_direct"
+            },
+            "tupleset": {
+              "relation": "direct_employee"
+            }
+          }
+        },
+        "substitute_employee": {
+          "computedUserset": {
+            "relation": "substitute_chain_employee"
+          }
+        }
+      },
+      "type": "Professions"
+    },
+    {
+      "metadata": {
+        "relations": {
+          "ancestor": {},
+          "can_use": {},
+          "can_use_chain": {},
+          "can_use_direct": {},
+          "child": {
+            "directly_related_user_types": [
+              {
+                "type": "Divisions"
+              }
+            ]
+          },
+          "descendant": {},
+          "direct_employee": {
+            "directly_related_user_types": [
+              {
+                "type": "Employees"
+              }
+            ]
+          },
+          "direct_staff": {
+            "directly_related_user_types": [
+              {
+                "type": "Staffs"
+              }
+            ]
+          },
+          "employee": {},
+          "employee_chain": {},
+          "employee_direct": {},
+          "parent": {
+            "directly_related_user_types": [
+              {
+                "type": "Divisions"
+              }
+            ]
+          },
+          "staff": {},
+          "substitute_chain_employee": {},
+          "substitute_direct_employee": {},
+          "substitute_employee": {}
+        }
+      },
+      "relations": {
+        "ancestor": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "parent"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "ancestor"
+                  },
+                  "tupleset": {
+                    "relation": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "can_use": {
+          "computedUserset": {
+            "relation": "employee"
+          }
+        },
+        "can_use_chain": {
+          "computedUserset": {
+            "relation": "employee_chain"
+          }
+        },
+        "can_use_direct": {
+          "computedUserset": {
+            "relation": "employee_direct"
+          }
+        },
+        "child": {
+          "this": {}
+        },
+        "descendant": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "child"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "descendant"
+                  },
+                  "tupleset": {
+                    "relation": "child"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "direct_employee": {
+          "this": {}
+        },
+        "direct_staff": {
+          "this": {}
+        },
+        "employee": {
+          "computedUserset": {
+            "relation": "employee_chain"
+          }
+        },
+        "employee_chain": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_employee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "substitute_chain_employee"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "employee_chain"
+                  },
+                  "tupleset": {
+                    "relation": "child"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "employee_direct": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_employee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "substitute_direct_employee"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "employee_direct"
+                  },
+                  "tupleset": {
+                    "relation": "child"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "parent": {
+          "this": {}
+        },
+        "staff": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_staff"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "staff"
+                  },
+                  "tupleset": {
+                    "relation": "child"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "substitute_chain_employee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "substitute_chain"
+            },
+            "tupleset": {
+              "relation": "direct_employee"
+            }
+          }
+        },
+        "substitute_direct_employee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "substitute_direct"
+            },
+            "tupleset": {
+              "relation": "direct_employee"
+            }
+          }
+        },
+        "substitute_employee": {
+          "computedUserset": {
+            "relation": "substitute_chain_employee"
+          }
+        }
+      },
+      "type": "Divisions"
+    },
+    {
+      "metadata": {
+        "relations": {
+          "can_use": {},
+          "can_use_chain": {},
+          "can_use_direct": {},
+          "direct_division": {
+            "directly_related_user_types": [
+              {
+                "type": "Divisions"
+              }
+            ]
+          },
+          "direct_employee": {
+            "directly_related_user_types": [
+              {
+                "type": "Employees"
+              }
+            ]
+          },
+          "division": {},
+          "employee": {},
+          "employee_chain": {},
+          "employee_direct": {},
+          "profession": {
+            "directly_related_user_types": [
+              {
+                "type": "Professions"
+              }
+            ]
+          },
+          "substitute_chain_from_employee": {},
+          "substitute_direct_from_employee": {},
+          "substitute_from_employee": {}
+        }
+      },
+      "relations": {
+        "can_use": {
+          "computedUserset": {
+            "relation": "employee"
+          }
+        },
+        "can_use_chain": {
+          "computedUserset": {
+            "relation": "employee_chain"
+          }
+        },
+        "can_use_direct": {
+          "computedUserset": {
+            "relation": "employee_direct"
+          }
+        },
+        "direct_division": {
+          "this": {}
+        },
+        "direct_employee": {
+          "this": {}
+        },
+        "division": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_division"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "ancestor"
+                  },
+                  "tupleset": {
+                    "relation": "direct_division"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "employee": {
+          "computedUserset": {
+            "relation": "employee_chain"
+          }
+        },
+        "employee_chain": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_employee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "substitute_chain_from_employee"
+                }
+              }
+            ]
+          }
+        },
+        "employee_direct": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_employee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "substitute_direct_from_employee"
+                }
+              }
+            ]
+          }
+        },
+        "profession": {
+          "this": {}
+        },
+        "substitute_chain_from_employee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "substitute_chain"
+            },
+            "tupleset": {
+              "relation": "direct_employee"
+            }
+          }
+        },
+        "substitute_direct_from_employee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "substitute_direct"
+            },
+            "tupleset": {
+              "relation": "direct_employee"
+            }
+          }
+        },
+        "substitute_from_employee": {
+          "computedUserset": {
+            "relation": "substitute_chain_from_employee"
+          }
+        }
+      },
+      "type": "Staffs"
+    },
+    {
+      "metadata": {
+        "relations": {
+          "all_divisions": {},
+          "all_divisions_chain": {},
+          "all_divisions_direct": {},
+          "ancestor_division": {},
+          "descendant_division": {},
+          "descendant_division_from_replaced": {},
+          "direct_division": {
+            "directly_related_user_types": [
+              {
+                "type": "Divisions"
+              }
+            ]
+          },
+          "direct_profession": {
+            "directly_related_user_types": [
+              {
+                "type": "Professions"
+              }
+            ]
+          },
+          "direct_replaces": {
+            "directly_related_user_types": [
+              {
+                "type": "Employees"
+              }
+            ]
+          },
+          "direct_role": {
+            "directly_related_user_types": [
+              {
+                "type": "Roles"
+              }
+            ]
+          },
+          "direct_staff": {
+            "directly_related_user_types": [
+              {
+                "type": "Staffs"
+              }
+            ]
+          },
+          "direct_substitute": {
+            "directly_related_user_types": [
+              {
+                "type": "Employees"
+              }
+            ]
+          },
+          "division": {},
+          "division_from_replaced": {},
+          "profession": {},
+          "profession_from_replaced": {},
+          "replaces": {},
+          "replaces_chain": {},
+          "replaces_direct": {},
+          "role": {},
+          "role_chain": {},
+          "role_direct": {},
+          "role_from_replaced": {},
+          "staff": {},
+          "staff_chain": {},
+          "staff_direct": {},
+          "staff_from_replaced": {},
+          "substitute": {},
+          "substitute_chain": {},
+          "substitute_direct": {}
+        }
+      },
+      "relations": {
+        "all_divisions": {
+          "computedUserset": {
+            "relation": "all_divisions_chain"
+          }
+        },
+        "all_divisions_chain": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "all_divisions_direct"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "all_divisions_chain"
+                  },
+                  "tupleset": {
+                    "relation": "direct_replaces"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "all_divisions_direct": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_division"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "ancestor_division"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "descendant_division"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "division_from_replaced"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "descendant_division_from_replaced"
+                }
+              }
+            ]
+          }
+        },
+        "ancestor_division": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "ancestor"
+            },
+            "tupleset": {
+              "relation": "direct_division"
+            }
+          }
+        },
+        "descendant_division": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "descendant"
+            },
+            "tupleset": {
+              "relation": "direct_division"
+            }
+          }
+        },
+        "descendant_division_from_replaced": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "descendant_division"
+            },
+            "tupleset": {
+              "relation": "direct_replaces"
+            }
+          }
+        },
+        "direct_division": {
+          "this": {}
+        },
+        "direct_profession": {
+          "this": {}
+        },
+        "direct_replaces": {
+          "this": {}
+        },
+        "direct_role": {
+          "this": {}
+        },
+        "direct_staff": {
+          "this": {}
+        },
+        "direct_substitute": {
+          "this": {}
+        },
+        "division": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_division"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "ancestor_division"
+                }
+              }
+            ]
+          }
+        },
+        "division_from_replaced": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "direct_division"
+            },
+            "tupleset": {
+              "relation": "direct_replaces"
+            }
+          }
+        },
+        "profession": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_profession"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "profession_from_replaced"
+                }
+              }
+            ]
+          }
+        },
+        "profession_from_replaced": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "direct_profession"
+            },
+            "tupleset": {
+              "relation": "direct_replaces"
+            }
+          }
+        },
+        "replaces": {
+          "computedUserset": {
+            "relation": "replaces_chain"
+          }
+        },
+        "replaces_chain": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_replaces"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "replaces_chain"
+                  },
+                  "tupleset": {
+                    "relation": "direct_replaces"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "replaces_direct": {
+          "computedUserset": {
+            "relation": "direct_replaces"
+          }
+        },
+        "role": {
+          "computedUserset": {
+            "relation": "role_chain"
+          }
+        },
+        "role_chain": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "role_direct"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "role_chain"
+                  },
+                  "tupleset": {
+                    "relation": "direct_replaces"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "role_direct": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_role"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "role_from_replaced"
+                }
+              }
+            ]
+          }
+        },
+        "role_from_replaced": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "direct_role"
+            },
+            "tupleset": {
+              "relation": "direct_replaces"
+            }
+          }
+        },
+        "staff": {
+          "computedUserset": {
+            "relation": "staff_chain"
+          }
+        },
+        "staff_chain": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "staff_direct"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "staff_chain"
+                  },
+                  "tupleset": {
+                    "relation": "direct_replaces"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "staff_direct": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_staff"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "staff_from_replaced"
+                }
+              }
+            ]
+          }
+        },
+        "staff_from_replaced": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "direct_staff"
+            },
+            "tupleset": {
+              "relation": "direct_replaces"
+            }
+          }
+        },
+        "substitute": {
+          "computedUserset": {
+            "relation": "substitute_chain"
+          }
+        },
+        "substitute_chain": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_substitute"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "computedUserset": {
+                    "relation": "substitute_chain"
+                  },
+                  "tupleset": {
+                    "relation": "direct_substitute"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "substitute_direct": {
+          "computedUserset": {
+            "relation": "direct_substitute"
+          }
+        }
+      },
+      "type": "Employees"
+    },
+    {
+      "metadata": {
+        "relations": {
+          "assignee": {},
+          "assignee_chain": {},
+          "assignee_direct": {},
+          "can_use": {},
+          "can_use_chain": {},
+          "can_use_direct": {},
+          "direct_assignee": {
+            "directly_related_user_types": [
+              {
+                "type": "Employees"
+              }
+            ]
+          },
+          "division_assignee": {
+            "directly_related_user_types": [
+              {
+                "type": "Divisions"
+              }
+            ]
+          },
+          "division_employee": {},
+          "staff_assignee": {
+            "directly_related_user_types": [
+              {
+                "type": "Staffs"
+              }
+            ]
+          },
+          "staff_employee": {},
+          "substitute_assignee": {},
+          "substitute_chain_assignee": {},
+          "substitute_direct_assignee": {}
+        }
+      },
+      "relations": {
+        "assignee": {
+          "computedUserset": {
+            "relation": "assignee_chain"
+          }
+        },
+        "assignee_chain": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_assignee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "substitute_chain_assignee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "staff_employee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "division_employee"
+                }
+              }
+            ]
+          }
+        },
+        "assignee_direct": {
+          "union": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "direct_assignee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "substitute_direct_assignee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "staff_employee"
+                }
+              },
+              {
+                "computedUserset": {
+                  "relation": "division_employee"
+                }
+              }
+            ]
+          }
+        },
+        "can_use": {
+          "computedUserset": {
+            "relation": "assignee"
+          }
+        },
+        "can_use_chain": {
+          "computedUserset": {
+            "relation": "assignee_chain"
+          }
+        },
+        "can_use_direct": {
+          "computedUserset": {
+            "relation": "assignee_direct"
+          }
+        },
+        "direct_assignee": {
+          "this": {}
+        },
+        "division_assignee": {
+          "this": {}
+        },
+        "division_employee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "employee"
+            },
+            "tupleset": {
+              "relation": "division_assignee"
+            }
+          }
+        },
+        "staff_assignee": {
+          "this": {}
+        },
+        "staff_employee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "employee"
+            },
+            "tupleset": {
+              "relation": "staff_assignee"
+            }
+          }
+        },
+        "substitute_assignee": {
+          "computedUserset": {
+            "relation": "substitute_chain_assignee"
+          }
+        },
+        "substitute_chain_assignee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "substitute_chain"
+            },
+            "tupleset": {
+              "relation": "direct_assignee"
+            }
+          }
+        },
+        "substitute_direct_assignee": {
+          "tupleToUserset": {
+            "computedUserset": {
+              "relation": "substitute_direct"
+            },
+            "tupleset": {
+              "relation": "direct_assignee"
+            }
+          }
+        }
+      },
+      "type": "Roles"
+    }
+  ]
+}

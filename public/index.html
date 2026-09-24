@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenFGA — Сервис авторизации (ReBAC)</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- ВЕРХНЯЯ ШАПКА -->
+  <header>
+    <div class="header-title-row">
+      <h1>🛡️ OpenFGA — Сервис авторизации (ReBAC)</h1>
+      <span class="model-badge">OpenFGA Schema 1.1</span>
+    </div>
+  </header>
+
+  <!-- СВОРАЧИВАЕМЫЕ ГОТОВЫЕ СЦЕНАРИИ (ПРЕСЕТЫ) -->
+  <details class="presets-accordion">
+    <summary>
+      <span>⚡ Быстрые сценарии и примеры проверок (20 готовых кейсов)</span>
+      <span style="font-size: 0.78rem; font-weight: normal; color: #64748b;">(Нажмите, чтобы открыть/скрыть примеры)</span>
+    </summary>
+    <div class="presets-body">
+      
+      <!-- 1. Проверка прав (Check) -->
+      <div class="presets-category">
+        <div class="presets-category-title">🛡️ Проверка прав доступа (Check: ALLOW / DENY)</div>
+        <div class="preset-grid">
+          <button class="preset-btn" onclick="runPresetCheck('Employees:42179', 'can_use', 'Divisions:755', '42179 в своем отделе 755 (ALLOW)')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-allow-pill">🟢 ALLOW: Свой отдел</span>
+              <span class="preset-method-tag">Check</span>
+            </div>
+            <strong>42179 в отделе 755 (свой отдел)</strong>
+            <div class="preset-desc">Прямое прикрепление сотрудника к департаменту 755 ➔ доступ разрешен.</div>
+            <div class="preset-sig">Employees:42179 ➔ can_use ➔ Divisions:755</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetCheck('Employees:42179', 'direct_employee', 'Divisions:755', '42179 прямой сотрудник отдела 755')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-allow-pill">🟢 ALLOW: Прямой</span>
+              <span class="preset-method-tag">Check</span>
+            </div>
+            <strong>42179 прямой сотрудник отдела 755?</strong>
+            <div class="preset-desc">Первичное прикрепление в штатном расписании (инвариант 1:1) подтверждено.</div>
+            <div class="preset-sig">Employees:42179 ➔ direct_employee ➔ Divisions:755</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetCheck('Employees:34491', 'can_use', 'Divisions:755', 'Замещающий 34491 в отделе 755 замещаемого сотрудника 42179')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-allow-pill">🟢 ALLOW: По замещению</span>
+              <span class="preset-method-tag">Check</span>
+            </div>
+            <strong>Замещающий 34491 в отделе 755 замещаемого сотрудника?</strong>
+            <div class="preset-desc">34491 замещает сотрудника 42179 ➔ получает права на отдел 755.</div>
+            <div class="preset-sig">Employees:34491 ➔ can_use ➔ Divisions:755</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetCheck('Employees:34491', 'can_use', 'Staffs:17363', 'Целевое право can_use штатки 17363 по замещению')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-allow-pill">🟢 ALLOW: Штатка замещаемого</span>
+              <span class="preset-method-tag">Check</span>
+            </div>
+            <strong>Замещающий 34491 на штатке 17363 замещаемого сотрудника?</strong>
+            <div class="preset-desc">Штатная должность замещаемого сотрудника 42179 доступна замещающему по отношению replaces.</div>
+            <div class="preset-sig">Employees:34491 ➔ can_use ➔ Staffs:17363</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetCheck('Employees:34491', 'can_use_direct', 'Roles:c66452e0-23c5-5cbf-97fa-07b1480465dc', 'Доступ 1-го уровня замещения (34491 -> 42179)')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-allow-pill">🎯 ALLOW: 1-й уровень</span>
+              <span class="preset-method-tag">Check</span>
+            </div>
+            <strong>34491 к роли 42179 (can_use_direct)?</strong>
+            <div class="preset-desc">Прямой 1-й уровень замещения: роль замещаемого сотрудника 42179 разрешена.</div>
+            <div class="preset-sig">Employees:34491 ➔ can_use_direct ➔ Roles:c66452e0...</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetCheck('Employees:34491', 'can_use_chain', 'Roles:bd38f78f-7ad0-595e-81d6-06b970a7e9c3', 'Цепочка замещений 2-го уровня (34491 -> 42179 -> 53450)')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-allow-pill">🔗 ALLOW: Вся цепочка</span>
+              <span class="preset-method-tag">Check</span>
+            </div>
+            <strong>34491 к роли 53450 по цепочке (can_use_chain)?</strong>
+            <div class="preset-desc">Транзитивное замещение: 34491 замещает 42179, а тот 53450. Роль разрешена.</div>
+            <div class="preset-sig">Employees:34491 ➔ can_use_chain ➔ Roles:bd38f78f...</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetCheck('Employees:34491', 'can_use_direct', 'Roles:bd38f78f-7ad0-595e-81d6-06b970a7e9c3', 'Ограничение 1-го уровня: 34491 к роли 53450 заблокировано')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-deny-pill">🎯 DENY: Ограничение</span>
+              <span class="preset-method-tag">Check</span>
+            </div>
+            <strong>34491 к роли 53450 при ограничении 1-м ур.?</strong>
+            <div class="preset-desc">Отказ: при отношении can_use_direct права 2-го уровня цепочки (53450) не передаются.</div>
+            <div class="preset-sig">Employees:34491 ➔ can_use_direct ➔ Roles:bd38f78f...</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetCheck('Employees:34491', 'can_use', 'Divisions:787', '34491 к чужому отделу 787 без замещения')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-deny-pill">🔴 DENY: Чужой отдел</span>
+              <span class="preset-method-tag">Check</span>
+            </div>
+            <strong>34491 имеет доступ к чужому отделу 787?</strong>
+            <div class="preset-desc">Отказ: 34491 числится в отделе 215, в отделе 787 никого не замещает ➔ доступ заблокирован.</div>
+            <div class="preset-sig">Employees:34491 ➔ can_use ➔ Divisions:787</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Поиск зависимостей (Lookup) -->
+      <div class="presets-category">
+        <div class="presets-category-title">🔍 Дерево подразделений и зависимости (Lookup: ListUsers & ListObjects)</div>
+        <div class="preset-grid">
+          <button class="preset-btn" onclick="runPresetListUsers('Employees:34491', 'all_divisions', 'Divisions', 'Все доступные отделы для 34491 (свои + дерево замещаемого сотрудника)')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-lookup-pill">🔍 LOOKUP: 100 отделов</span>
+              <span class="preset-method-tag">ListUsers</span>
+            </div>
+            <strong>Все доступные отделы 34491</strong>
+            <div class="preset-desc">Объединяет свой отдел 215 и все 99 подотделов замещаемого сотрудника 42179.</div>
+            <div class="preset-sig">Employees:34491 ➔ all_divisions ➔ Divisions</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetListUsers('Employees:34491', 'staff', 'Staffs', 'Штатки 34491 (своя 12099 + замещаемого 17363)')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-lookup-pill">🔍 LOOKUP: 2 штатки</span>
+              <span class="preset-method-tag">ListUsers</span>
+            </div>
+            <strong>Штатки 34491 (своя + замещаемого сотрудника)</strong>
+            <div class="preset-desc">Возвращает личную позицию 12099 и штатную должность замещаемого сотрудника 17363 по замещению.</div>
+            <div class="preset-sig">Employees:34491 ➔ staff ➔ Staffs</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetListUsers('Employees:34491', 'replaces', 'Employees', 'Кого замещает сотрудник 34491')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-lookup-pill">🔍 LOOKUP: Связь</span>
+              <span class="preset-method-tag">ListUsers</span>
+            </div>
+            <strong>Кого замещает сотрудник 34491?</strong>
+            <div class="preset-desc">Проверка активных замещений: сотрудник 34491 замещает сотрудника 42179.</div>
+            <div class="preset-sig">Employees:34491 ➔ replaces ➔ Employees:42179</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetListUsers('Employees:42179', 'substitute', 'Employees', 'Кто замещает сотрудника 42179')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-lookup-pill">🔍 LOOKUP: Замещающие</span>
+              <span class="preset-method-tag">ListUsers</span>
+            </div>
+            <strong>Кто замещает сотрудника 42179?</strong>
+            <div class="preset-desc">Обратная связь: список специалистов, замещающих сотрудника (34491).</div>
+            <div class="preset-sig">Employees:42179 ➔ substitute ➔ Employees:34491</div>
+          </button>
+
+          <button class="preset-btn" onclick="runPresetContextualSubstitute('Employees:34491', 'can_use', 'Divisions:787', 'Employees:68176')">
+            <div class="preset-badge-row">
+              <span class="preset-badge badge-check-pill" style="background: #0284c7;">⚡ CONTEXT: На лету</span>
+              <span class="preset-method-tag">Check API</span>
+            </div>
+            <strong>Временное замещение на лету (Contextual Tuples)</strong>
+            <div class="preset-desc">34491 временно замещает 68176 для разового доступа к подразделению 787 без изменения БД.</div>
+            <div class="preset-sig">34491 + [ctx sub 68176] ➔ can_use ➔ Divisions:787</div>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </details>
+
+  <!-- БЛОК 1: ОСНОВНЫЕ МОДУЛИ (CHECK / LOOKUP / BATCH CHECK) -->
+  <div class="box">
+    
+    <!-- Навигационные вкладки -->
+    <div class="tab-nav">
+      <button id="tabBtnCheck" class="tab-btn active" onclick="switchTab('check')">
+        🛡️ 1. Проверка прав (Check)
+      </button>
+      <button id="tabBtnLookup" class="tab-btn" onclick="switchTab('lookup')">
+        🔍 2. Поиск зависимостей (Lookup)
+      </button>
+      <button id="tabBtnBatch" class="tab-btn" onclick="switchTab('batch')">
+        ⚡ 3. Пакетная проверка (Batch Check)
+      </button>
+    </div>
+
+    <!-- ======================================================================
+         ВКЛАДКА 1: Проверка прав доступа (Check: Any-to-Any)
+         ====================================================================== -->
+    <div id="tabContentCheck" class="tab-content active">
+      <div class="form-grid-top-2">
+        <!-- 1. Субъект (User) -->
+        <div class="form-group" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+          <label style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">1. Субъект (Subject):</label>
+          <div class="compact-inline-grid">
+            <select id="checkSubjectType" onchange="onCheckSubjectTypeChange()">
+              <option value="Employees" selected>Сотрудник (Employees)</option>
+              <option value="Divisions">Подразделение (Divisions)</option>
+              <option value="Professions">Профессия (Professions)</option>
+              <option value="Staffs">Штатная единица (Staffs)</option>
+              <option value="Roles">Роль (Roles)</option>
+            </select>
+            <select id="checkSubjectItem" onchange="updateLiveRequestPreview()"></select>
+          </div>
+        </div>
+
+        <!-- 2. Целевой объект (Object) -->
+        <div class="form-group" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+          <label style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">2. Целевой объект (Object):</label>
+          <div class="compact-inline-grid">
+            <select id="checkTargetType" onchange="onCheckTargetTypeChange()">
+              <option value="Divisions" selected>Подразделение (Divisions)</option>
+              <option value="Professions">Профессия (Professions)</option>
+              <option value="Staffs">Штатная единица (Staffs)</option>
+              <option value="Employees">Сотрудник (Employees)</option>
+              <option value="Roles">Роль (Roles)</option>
+            </select>
+            <select id="checkTargetItem" onchange="updateLiveRequestPreview()"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid-action">
+        <div class="form-group">
+          <label style="font-weight: 700;">3. Проверяемое отношение (Relation):</label>
+          <select id="checkRelation" onchange="updateLiveRequestPreview()"></select>
+        </div>
+        <button id="btnCheckSubmit" class="primary" onclick="executeCheckFromForm()">
+          🛡️ Проверить право доступа (Check)
+        </button>
+      </div>
+
+      <!-- 4. Динамический контекст (Contextual Tuples) -->
+      <div class="contextual-tuples-box" style="margin-top: 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #1e293b; cursor: pointer; margin: 0;">
+            <input type="checkbox" id="enableContextualTuples" onchange="onToggleContextualTuples(event)" style="cursor: pointer; width: 16px; height: 16px;">
+            ⚡ Временный контекст (Contextual Tuples — симуляция на лету без изменения БД)
+          </label>
+          <span id="contextualTuplesBadge" style="font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: 600; border: 1px solid #e2e8f0;">Неактивен</span>
+        </div>
+        
+        <div id="contextualTuplesPanel" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+          <div style="font-size: 12px; color: #64748b; margin-bottom: 8px; line-height: 1.4;">
+            💡 <strong>Contextual Tuples</strong> передаются прямо в тело запроса OpenFGA Check API. Они действуют <em>только в рамках текущего вызова</em> — для временного замещения на период отпуска, дежурств и разовых делегаций прав без записи в постоянную базу данных.
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+            <button type="button" class="preset-pill-btn" onclick="applyContextualPreset('sub_68176')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; color: #334155; font-weight: 600;">
+              ⚡ Симуляция: 34491 временно замещает 68176 (отдел 787)
+            </button>
+            <button type="button" class="preset-pill-btn" onclick="applyContextualPreset('grant_role')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; color: #334155; font-weight: 600;">
+              🔑 Симуляция: разовый грант роли 42179 для 34491
+            </button>
+            <button type="button" class="preset-pill-btn" onclick="applyContextualPreset('clear')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer; color: #64748b;">
+              Очистить
+            </button>
+          </div>
+          <textarea id="contextualTuplesJson" rows="5" style="width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #1e293b;" placeholder='[&#10;  { "user": "Employees:34491", "relation": "direct_substitute", "object": "Employees:68176" },&#10;  { "user": "Employees:68176", "relation": "direct_replaces", "object": "Employees:34491" }&#10;]' oninput="onContextualTuplesInput()">[
+  { "user": "Employees:34491", "relation": "direct_substitute", "object": "Employees:68176" },
+  { "user": "Employees:68176", "relation": "direct_replaces", "object": "Employees:34491" }
+]</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         ВКЛАДКА 2: Поиск зависимостей (Lookup)
+         ====================================================================== -->
+    <div id="tabContentLookup" class="tab-content">
+      <div class="form-grid-top">
+        <div class="form-group">
+          <label>1. Тип исходной сущности:</label>
+          <select id="lookupEntityType" onchange="onLookupEntityTypeChange()">
+            <option value="Employees" selected>Сотрудник (Employees)</option>
+            <option value="Divisions">Подразделение (Divisions)</option>
+            <option value="Professions">Профессия (Professions)</option>
+            <option value="Staffs">Штатная единица (Staffs)</option>
+            <option value="Roles">Роль (Roles)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>2. Выберите исходный элемент:</label>
+          <select id="lookupEntityItem" onchange="onLookupEntityItemChange()"></select>
+        </div>
+      </div>
+
+      <div class="form-grid-action">
+        <div class="form-group">
+          <label>3. Какую зависимость / связь получить:</label>
+          <select id="lookupDependencyRel" onchange="updateLiveRequestPreview()"></select>
+        </div>
+        <button class="primary" onclick="executeLookupQuery()">🔍 Найти связанные объекты (Lookup)</button>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         ВКЛАДКА 3: Пакетная проверка (Batch Check)
+         ====================================================================== -->
+    <div id="tabContentBatch" class="tab-content">
+      <!-- Готовые пакетные сценарии -->
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #475569; font-size: 0.82rem;">Быстрый выбор готовых сценариев пакета:</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button type="button" class="batch-scenario-btn active" id="btnScenarioDefault" onclick="loadBatchScenario('default')">
+            🏢 1. Базовый (4 в 1: отделы, замещения, штатки)
+          </button>
+          <button type="button" class="batch-scenario-btn" id="btnScenarioSubstitute34491" onclick="loadBatchScenario('substitute34491')">
+            👤 2. Все права замещающего 34491
+          </button>
+          <button type="button" class="batch-scenario-btn" id="btnScenarioCanUseVsDirect" onclick="loadBatchScenario('canUseVsDirect')">
+            ⚖️ 3. can_use vs direct_employee
+          </button>
+          <button type="button" class="batch-scenario-btn" id="btnScenarioRolesAndGrants" onclick="loadBatchScenario('rolesAndGrants')">
+            🔑 4. Роли и ручные гранты
+          </button>
+        </div>
+      </div>
+
+      <!-- Таблица кортежей текущего пакета -->
+      <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; margin-bottom: 14px;">
+        <div style="background: #f8fafc; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 700; font-size: 0.82rem; color: #475569; text-transform: uppercase;">
+            Кортежи в пакете (<span id="batchCountBadge">4</span>)
+          </span>
+          <button type="button" class="tab-btn" style="padding: 2px 8px; font-size: 0.78rem; height: 26px; margin: 0;" onclick="clearBatchChecks()">
+            🗑️ Очистить список
+          </button>
+        </div>
+        <div style="max-height: 220px; overflow-y: auto;">
+          <table class="batch-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">#</th>
+                <th>Субъект (User)</th>
+                <th>Право (Relation)</th>
+                <th>Целевой объект (Object)</th>
+                <th style="width: 70px; text-align: center;">Удалить</th>
+              </tr>
+            </thead>
+            <tbody id="batchTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Конструктор: добавление новой проверки в пачку -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 14px;">
+        <div style="font-weight: 600; font-size: 0.84rem; color: #334155; margin-bottom: 8px;">
+          ➕ Добавить кортеж в текущий пакет:
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto; gap: 8px; align-items: flex-end;">
+          <div class="form-group">
+            <label style="font-size: 0.76rem;">Субъект (User):</label>
+            <select id="batchAddSubject"></select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.76rem;">Право (Relation):</label>
+            <select id="batchAddRelation">
+              <option value="can_use">can_use (Целевое право)</option>
+              <option value="can_use_direct">can_use_direct (1-й ур. замещения)</option>
+              <option value="can_use_chain">can_use_chain (Вся цепочка)</option>
+              <option value="direct_employee">direct_employee (Строго личный отдел)</option>
+              <option value="direct_assignee">direct_assignee (Строго личная роль)</option>
+              <option value="assignee">assignee (Все источники роли)</option>
+              <option value="substitute_assignee">substitute_assignee (Роль по замещению)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.76rem;">Целевой объект (Object):</label>
+            <select id="batchAddObject"></select>
+          </div>
+          <button type="button" class="tab-btn" style="background: #e2e8f0; color: #1e293b; padding: 8px 14px; font-weight: 600;" onclick="addCheckToBatch()">
+            Добавить
+          </button>
+        </div>
+      </div>
+
+      <button class="primary" style="width: 100%;" onclick="executeBatchFromTab()">
+        ⚡ Выполнить пакетную проверку (OpenFGA BatchCheck)
+      </button>
+    </div>
+
+  </div>
+
+  <!-- КАРТОЧКА РЕЗУЛЬТАТА ВЫПОЛНЕНИЯ (Показывается при отправке запросов) -->
+  <div id="resultBox" class="box compact-result-box">
+    <!-- Максимально компактная строка результата проверки (Зеленый / Красный свет) -->
+    <div id="resultCheckBar" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span id="resultPill" class="result-pill pill-allow">🟢 ALLOW</span>
+        <span id="resultSummaryText" style="font-weight: 600; font-size: 0.95rem; color: #1e293b; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;"></span>
+      </div>
+      <div id="resultDurationBadge" style="font-size: 0.8rem; color: #64748b; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;"></div>
+    </div>
+    
+    <div id="resultTitle" style="display: none; margin: 0 0 6px 0; font-size: 1rem;">Результат запроса</div>
+    <div id="resultMeta" class="result-meta" style="display: none;"></div>
+    <div id="resultList" class="result-list" style="display: none;"></div>
+    <div id="resultExplanationBox" style="display: none;"></div>
+  </div>
+
+  <!-- ИНСПЕКТОР API: LIVE REQUEST PREVIEW & RESPONSE (ВСЕГДА ВИДЕН) -->
+  <div id="apiInspectorBox" class="box api-inspector-box">
+    <div class="api-inspector-header">
+      <div class="api-inspector-title-row">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <h3 style="margin: 0; font-size: 1.05rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            <span>📡 Инспектор API (Request & Response)</span>
+          </h3>
+          <span id="reqModeBadge" class="badge-preview-live">⚡ Предпросмотр (Live Preview)</span>
+        </div>
+        <div class="api-inspector-subtitle">
+          Динамический предпросмотр HTTP-запроса к OpenFGA API в реальном времени при выборе любых параметров
+        </div>
+      </div>
+      <div class="api-inspector-actions">
+        <button type="button" class="inspector-action-btn" onclick="copyRequestCurl()" title="Скопировать команду cURL">
+          📋 cURL
+        </button>
+        <button type="button" class="inspector-action-btn" onclick="copyRequestJson()" title="Скопировать JSON запроса">
+          📋 Request JSON
+        </button>
+        <button type="button" class="inspector-action-btn" onclick="copyResponseJson()" title="Скопировать JSON ответа">
+          📋 Response JSON
+        </button>
+      </div>
+    </div>
+
+    <div class="inspector-grid">
+      <!-- Левая колонка: HTTP-запрос (Live Preview & Executed Request) -->
+      <div class="inspector-panel">
+        <div class="inspector-badge-row">
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span class="inspector-badge" id="reqBadge">POST /check</span>
+            <span class="inspector-pdp-badge" id="reqPdpBadge">OpenFGA: POST /stores/{store_id}/check</span>
+          </div>
+          <span style="font-size: 0.72rem; color: #94a3b8;" id="reqSublabel">Payload запроса</span>
+        </div>
+        <pre class="json-pre" id="jsonRequest">// Формирование запроса...</pre>
+      </div>
+
+      <!-- Правая колонка: HTTP-ответ (OpenFGA Response) -->
+      <div class="inspector-panel">
+        <div class="inspector-badge-row">
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span class="badge-status badge-status-idle" id="resBadge">⏳ Ожидание запроса</span>
+            <span style="font-size: 0.7rem; color: #94a3b8;" id="resDuration"></span>
+          </div>
+          <span style="font-size: 0.72rem; color: #94a3b8;">Ответ OpenFGA</span>
+        </div>
+        <pre class="json-pre" id="jsonResponse">// Ожидание выполнения запроса... Нажмите кнопку проверки выше</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- БЛОК 2: ГРАФ МОДЕЛИ И СХЕМА OpenFGA (Как раньше, прямо снизу под результатами!) -->
+  <div class="box">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+      <div>
+        <h3 style="margin: 0; color: #0f172a;">🕸️ Интерактивный граф модели и данных OpenFGA</h3>
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+          Наведите на любую вершину или связь для подсветки. Нажмите на вершину для перехода к ней в форме.
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <div class="graph-segmented-control" id="graphModeControl">
+          <button id="btnGraphModel" type="button" class="graph-segment-btn active" onclick="switchGraphMode('model')">
+            🕸️ Модель (7 сущностей)
+          </button>
+          <button id="btnGraphEntity" type="button" class="graph-segment-btn" onclick="switchGraphMode('entity')">
+            🔗 Цепочка решения (Data Path)
+          </button>
+          <button id="btnGraphFga" type="button" class="graph-segment-btn" onclick="switchGraphMode('fga')">
+            📜 DSL модели (model.fga)
+          </button>
+          <button id="btnGraphJson" type="button" class="graph-segment-btn" onclick="switchGraphMode('json')">
+            📄 JSON модели (model.json)
+          </button>
+        </div>
+        <button id="btnGraphReset" type="button" class="tab-btn" style="padding: 4px 10px; font-size: 0.8rem;" onclick="resetGraphHighlight()" title="Сбросить выделенный путь">
+          Сбросить путь
+        </button>
+      </div>
+    </div>
+
+    <!-- Информационная полоса активного пути (Breadcrumbs) -->
+    <div id="graphPathBreadcrumb" class="graph-path-strip">
+      <span class="path-badge-label">Активный путь:</span>
+      <span id="graphPathText" style="color: #94a3b8;">Выполните проверку или поиск выше — здесь отобразится путь, по которому прошел запрос.</span>
+    </div>
+
+    <!-- FGA DSL Контейнер схемы OpenFGA (model.fga) -->
+    <div id="graphFgaView" style="display: none; background: #0f172a; border-radius: 8px; padding: 14px; margin-top: 10px; color: #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span style="font-weight: 700; color: #38bdf8; font-size: 0.9rem;">OpenFGA DSL Schema (model.fga)</span>
+          <span style="background: #1e293b; color: #94a3b8; font-size: 0.76rem; padding: 2px 8px; border-radius: 4px; border: 1px solid #475569;" id="fgaStatsBadge">Типов: 7 | Схема: 1.1</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="text" id="fgaSearchInput" placeholder="Поиск по DSL коду..." style="background: #1e293b; border: 1px solid #475569; color: #f8fafc; font-size: 0.78rem; padding: 4px 8px; border-radius: 4px; width: 220px;" oninput="filterFgaModelView()">
+          <button type="button" class="tab-btn" style="background: #2563eb; color: #ffffff; border: none; font-size: 0.78rem; padding: 4px 10px; border-radius: 4px; cursor: pointer;" onclick="copyModelFga()">📋 Скопировать FGA</button>
+        </div>
+      </div>
+      <!-- Селектор типов для быстрого перехода к типу в DSL -->
+      <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;" id="fgaTypePills">
+        <button type="button" class="graph-segment-btn active" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterFgaType('all')">Весь файл</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterFgaType('Employees')">Employees</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterFgaType('Divisions')">Divisions</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterFgaType('Professions')">Professions</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterFgaType('Staffs')">Staffs</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterFgaType('Roles')">Roles</button>
+      </div>
+      <div style="max-height: 480px; overflow: auto; background: #020617; border-radius: 6px; padding: 12px; border: 1px solid #1e293b;">
+        <pre id="fgaModelPre" style="margin: 0; font-size: 0.8rem; line-height: 1.45; color: #e2e8f0; white-space: pre-wrap;"></pre>
+      </div>
+    </div>
+
+    <!-- JSON Контейнер официальной модели OpenFGA -->
+    <div id="graphJsonView" style="display: none; background: #0f172a; border-radius: 8px; padding: 14px; margin-top: 10px; color: #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span style="font-weight: 700; color: #38bdf8; font-size: 0.9rem;">OpenFGA Schema 1.1</span>
+          <span style="background: #1e293b; color: #94a3b8; font-size: 0.76rem; padding: 2px 8px; border-radius: 4px; border: 1px solid #475569;" id="jsonStatsBadge">Типов: 5 | Отношений: 0</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="text" id="jsonSearchInput" placeholder="Поиск по отношению или типу..." style="background: #1e293b; border: 1px solid #475569; color: #f8fafc; font-size: 0.78rem; padding: 4px 8px; border-radius: 4px; width: 220px;" oninput="filterJsonModelView()">
+          <button type="button" class="tab-btn" style="background: #2563eb; color: #ffffff; border: none; font-size: 0.78rem; padding: 4px 10px; border-radius: 4px; cursor: pointer;" onclick="copyModelJson()">📋 Скопировать JSON</button>
+        </div>
+      </div>
+      <!-- Селектор типов для быстрого фокуса -->
+      <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;" id="jsonTypePills">
+        <button type="button" class="graph-segment-btn active" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterJsonType('all')">Все типы (5)</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterJsonType('Divisions')">Divisions</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterJsonType('Professions')">Professions</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterJsonType('Staffs')">Staffs</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterJsonType('Employees')">Employees</button>
+        <button type="button" class="graph-segment-btn" style="font-size: 0.74rem; padding: 2px 8px;" onclick="filterJsonType('Roles')">Roles</button>
+      </div>
+      <div style="max-height: 480px; overflow: auto; background: #020617; border-radius: 6px; padding: 12px; border: 1px solid #1e293b;">
+        <pre id="jsonModelPre" style="margin: 0; font-size: 0.8rem; line-height: 1.45; color: #e2e8f0; white-space: pre-wrap;"></pre>
+      </div>
+    </div>
+
+    <!-- SVG Контейнер графа -->
+    <div class="graph-canvas-wrapper">
+      <svg id="graphSvg" viewBox="0 0 980 500" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    
+    <!-- Легенда типов графа -->
+    <div class="graph-legend">
+      <span class="legend-item"><span class="legend-dot" style="background: #8b5cf6;"></span> Divisions (Подразделения)</span>
+      <span class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> Professions (Профессии)</span>
+      <span class="legend-item"><span class="legend-dot" style="background: #06b6d4;"></span> Staffs (Штатные единицы)</span>
+      <span class="legend-item"><span class="legend-dot" style="background: #3b82f6;"></span> Employees (Сотрудники)</span>
+      <span class="legend-item"><span class="legend-dot" style="background: #f59e0b;"></span> Roles (Роли)</span>
+    </div>
+  </div>
+
+  <!-- БЛОК 3: РЕЛЯЦИОННЫЕ ТАБЛИЦЫ ДАННЫХ (Как раньше, внизу страницы) -->
+  <div class="box">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="margin: 0; color: #0f172a;">📊 Реляционные CSV-таблицы</h3>
+      <span id="rowsCount" style="color: #64748b; font-size: 0.85rem; font-weight: 600;"></span>
+    </div>
+
+    <div class="table-header-grid">
+      <div class="form-group" style="width: 260px;">
+        <label>Выберите таблицу:</label>
+        <select id="tableSelect" onchange="renderCurrentTable()">
+          <option value="employees">Сотрудники (employees)</option>
+          <option value="divisions">Подразделения (divisions)</option>
+          <option value="professions">Профессии (professions)</option>
+          <option value="staffs">Штатное расписание (staffs)</option>
+          <option value="roles">Роли (roles)</option>
+          <option value="replacings">Замещения (replacings)</option>
+          <option value="grants">Гранты (grants)</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="flex: 1; min-width: 220px;">
+        <label>Быстрый фильтр строк:</label>
+        <input type="text" id="filterInput" placeholder="Поиск по значению любой колонки..." oninput="renderCurrentTable()">
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table id="dataTable">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Контейнер для всплывающих уведомлений о копировании -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Серверная инжекция данных и подключение клиентского скрипта -->
+  <script>
+    window.__TABLES_DATA__ = __TABLES_DATA__;
+    window.__MODEL_DATA__ = __MODEL_DATA__;
+    window.__MODEL_FGA__ = __MODEL_FGA__;
+  </script>
+  <script src="/app.js" defer></script>
+</body>
+</html>

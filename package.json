@@ -1,0 +1,20 @@
+{
+  "name": "kalifgamodel",
+  "version": "1.0.0",
+  "description": "Minimal OpenFGA authorization model with CSV import and interactive tester",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "import": "node src/import.js",
+    "test": "node --test test/test.js",
+    "model:json": "fga model transform --file model.fga | node -e \"const fs=require('fs'); fs.writeFileSync('model.json', JSON.stringify(JSON.parse(fs.readFileSync(0, 'utf8')), null, 2));\""
+  },
+  "keywords": [
+    "openfga",
+    "authorization",
+    "rebac"
+  ],
+  "author": "",
+  "license": "MIT"
+}

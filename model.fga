@@ -1,0 +1,178 @@
+model
+  schema 1.1
+
+# ==============================================================================
+# 1. Professions (профессии)
+# ==============================================================================
+type Professions
+  relations
+    # Штатные единицы с данной профессией
+    define staff: [Staffs]
+
+    # Сотрудники с данной профессией напрямую (из синхронизации или по грантам)
+    define direct_employee: [Employees]
+
+    # Сотрудники через штатное расписание
+    define staff_employee: employee from staff
+    define staff_employee_direct: employee_direct from staff
+
+    # Замещение сотрудников
+    define substitute_direct_employee: substitute_direct from direct_employee
+    define substitute_chain_employee: substitute_chain from direct_employee
+    define substitute_employee: substitute_chain_employee
+
+    # Все сотрудники с данной профессией (прямые + по штатке + по замещениям)
+    define employee_direct: direct_employee or staff_employee_direct or substitute_direct_employee
+    define employee_chain: direct_employee or staff_employee or substitute_chain_employee
+    define employee: employee_chain
+
+    # Целевое право на профессию
+    define can_use_direct: employee_direct
+    define can_use_chain: employee_chain
+    define can_use: employee
+
+
+# ==============================================================================
+# 2. Divisions (подразделения)
+# ==============================================================================
+type Divisions
+  relations
+    # Иерархия подразделений (дерево/DAG)
+    define parent: [Divisions]
+    define ancestor: parent or ancestor from parent
+
+    define child: [Divisions]
+    define descendant: child or descendant from child
+
+    # Штатные единицы в данном подразделении и дочерних
+    define direct_staff: [Staffs]
+    define staff: direct_staff or staff from child
+
+    # Сотрудники подразделения напрямую (из синхронизации или по грантам)
+    define direct_employee: [Employees]
+
+    # Замещающие сотрудников данного подразделения: 1-й уровень и цепочка
+    define substitute_direct_employee: substitute_direct from direct_employee
+    define substitute_chain_employee: substitute_chain from direct_employee
+    define substitute_employee: substitute_chain_employee
+
+    # Все сотрудники данного подразделения
+    define employee_direct: direct_employee or substitute_direct_employee or employee_direct from child
+    define employee_chain: direct_employee or substitute_chain_employee or employee_chain from child
+    define employee: employee_chain
+
+    # Целевое право на использование подразделения
+    define can_use_direct: employee_direct
+    define can_use_chain: employee_chain
+    define can_use: employee
+
+
+# ==============================================================================
+# 3. Staffs (штатное расписание)
+# ==============================================================================
+type Staffs
+  relations
+    # Подразделение штатной позиции
+    define direct_division: [Divisions]
+    define division: direct_division or ancestor from direct_division
+
+    # Профессия штатной позиции
+    define profession: [Professions]
+
+    # Сотрудник, занимающий штатную должность (напрямую или по гранту)
+    define direct_employee: [Employees]
+
+    # Замещение сотрудника, занимающего данную позицию: 1-й уровень и цепочка
+    define substitute_direct_from_employee: substitute_direct from direct_employee
+    define substitute_chain_from_employee: substitute_chain from direct_employee
+    define substitute_from_employee: substitute_chain_from_employee
+
+    # Эффективный исполнитель должности
+    define employee_direct: direct_employee or substitute_direct_from_employee
+    define employee_chain: direct_employee or substitute_chain_from_employee
+    define employee: employee_chain
+
+    # Целевое право на исполнение должности
+    define can_use_direct: employee_direct
+    define can_use_chain: employee_chain
+    define can_use: employee
+
+
+# ==============================================================================
+# 4. Employees (сотрудники)
+# ==============================================================================
+type Employees
+  relations
+    # Точное прямое подразделение сотрудника
+    define direct_division: [Divisions]
+    define ancestor_division: ancestor from direct_division
+    define descendant_division: descendant from direct_division
+    define division: direct_division or ancestor_division
+
+    # Замещение: кто кого замещает (прямо 1-й уровень и транзитивно по цепочке)
+    define direct_replaces: [Employees]
+    define replaces_direct: direct_replaces
+    define replaces_chain: direct_replaces or replaces_chain from direct_replaces
+    define replaces: replaces_chain
+
+    # Подразделения, унаследованные от замещаемого сотрудника
+    define division_from_replaced: direct_division from direct_replaces
+    define descendant_division_from_replaced: descendant_division from direct_replaces
+    define all_divisions_direct: direct_division or ancestor_division or descendant_division or division_from_replaced or descendant_division_from_replaced
+    define all_divisions_chain: all_divisions_direct or all_divisions_chain from direct_replaces
+    define all_divisions: all_divisions_chain
+
+    # Профессия сотрудника
+    define direct_profession: [Professions]
+    define profession_from_replaced: direct_profession from direct_replaces
+    define profession: direct_profession or profession_from_replaced
+
+    # Штатная позиция сотрудника
+    define direct_staff: [Staffs]
+    define staff_from_replaced: direct_staff from direct_replaces
+    define staff_direct: direct_staff or staff_from_replaced
+    define staff_chain: staff_direct or staff_chain from direct_replaces
+    define staff: staff_chain
+
+    # Замещение в обратную сторону: кто замещает данного сотрудника
+    define direct_substitute: [Employees]
+    define substitute_direct: direct_substitute
+    define substitute_chain: direct_substitute or substitute_chain from direct_substitute
+    define substitute: substitute_chain
+
+    # Роли сотрудника
+    define direct_role: [Roles]
+    define role_from_replaced: direct_role from direct_replaces
+    define role_direct: direct_role or role_from_replaced
+    define role_chain: role_direct or role_chain from direct_replaces
+    define role: role_chain
+
+
+# ==============================================================================
+# 5. Roles (роли и права)
+# ==============================================================================
+type Roles
+  relations
+    # Прямое назначение роли пользователю по табельному номеру
+    define direct_assignee: [Employees]
+
+    # Назначение роли на штатную позицию или всё подразделение
+    define staff_assignee: [Staffs]
+    define division_assignee: [Divisions]
+    define staff_employee: employee from staff_assignee
+    define division_employee: employee from division_assignee
+
+    # Замещение: 1-й уровень и цепочка
+    define substitute_direct_assignee: substitute_direct from direct_assignee
+    define substitute_chain_assignee: substitute_chain from direct_assignee
+    define substitute_assignee: substitute_chain_assignee
+
+    # Итоговый доступ к роли
+    define assignee_direct: direct_assignee or substitute_direct_assignee or staff_employee or division_employee
+    define assignee_chain: direct_assignee or substitute_chain_assignee or staff_employee or division_employee
+    define assignee: assignee_chain
+
+    # Целевое право на использование роли
+    define can_use_direct: assignee_direct
+    define can_use_chain: assignee_chain
+    define can_use: assignee
