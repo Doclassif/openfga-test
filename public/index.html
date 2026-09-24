@@ -178,10 +178,10 @@
         🛡️ 1. Проверка прав (Check)
       </button>
       <button id="tabBtnLookup" class="tab-btn" onclick="switchTab('lookup')">
-        🔍 2. Поиск зависимостей (Lookup)
+        🔍 2. Зависимости (Lookup)
       </button>
       <button id="tabBtnBatch" class="tab-btn" onclick="switchTab('batch')">
-        ⚡ 3. Пакетная проверка (Batch Check)
+        ⚡ 3. Пакетная проверка (Batch)
       </button>
       <button id="tabBtnRead" class="tab-btn" onclick="switchTab('read')">
         📖 4. Чтение кортежей (Read)
@@ -399,28 +399,28 @@
       </div>
 
       <!-- Быстрые фильтры чтения -->
-      <div style="margin-bottom: 12px;">
+      <div style="margin-bottom: 14px;">
         <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #475569; font-size: 0.82rem;">Быстрые пресеты чтения:</label>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('all')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer; color: #1e293b; font-weight: 600;">
+          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('all')">
             📦 Первые 50 кортежей (без фильтра)
           </button>
-          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('emp_34491')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; color: #1e293b; font-weight: 600;">
+          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('emp_34491')">
             👤 Кортежи сотрудника 34491
           </button>
-          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('div_215')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; color: #1e293b; font-weight: 600;">
+          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('div_215')">
             🏢 Кортежи отдела 215
           </button>
-          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('roles')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; color: #1e293b; font-weight: 600;">
+          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('roles')">
             🔑 Назначения ролей (Roles)
           </button>
-          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('replacings')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; color: #1e293b; font-weight: 600;">
+          <button type="button" class="preset-pill-btn" onclick="applyReadPreset('replacings')">
             🔄 Замещения (Replacings)
           </button>
         </div>
       </div>
 
-      <!-- Форма фильтрации кортежей -->
+      <!-- Форма фильтрации кортежей: 1-я строка (Объект и Пользователь) -->
       <div class="form-grid-top-2" style="margin-bottom: 12px;">
         <!-- Фильтр по объекту -->
         <div class="form-group" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
@@ -455,21 +455,26 @@
         </div>
       </div>
 
-      <div class="form-grid-action">
+      <!-- Форма фильтрации кортежей: 2-я строка (Отношение и Лимит страницы) -->
+      <div class="form-grid-top-2" style="margin-bottom: 14px;">
         <div class="form-group">
-          <label style="font-weight: 700; font-size: 0.82rem;">3. Отношение (Relation filter):</label>
-          <input type="text" id="readRelation" placeholder="Оставьте пустым или введите отношение (напр. direct_employee)" oninput="updateLiveRequestPreview()" style="font-family: ui-monospace, monospace; font-size: 0.85rem; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%; box-sizing: border-box;">
+          <label style="font-weight: 700; font-size: 0.82rem;">3. Отношение (Relation filter, опционально):</label>
+          <input type="text" id="readRelation" placeholder="Оставьте пустым (любое) или введите отношение (напр. direct_employee)" oninput="updateLiveRequestPreview()">
         </div>
-        <div class="form-group" style="max-width: 140px;">
-          <label style="font-weight: 700; font-size: 0.82rem;">Лимит (Page size):</label>
+        <div class="form-group">
+          <label style="font-weight: 700; font-size: 0.82rem;">4. Лимит на страницу (Page size):</label>
           <select id="readPageSize" onchange="updateLiveRequestPreview()">
             <option value="25">25 записей</option>
             <option value="50" selected>50 записей</option>
             <option value="100">100 записей</option>
           </select>
         </div>
-        <button class="primary" onclick="executeReadQuery(false)">📖 Читать кортежи (Read)</button>
       </div>
+
+      <!-- Кнопка чтения на всю ширину -->
+      <button class="primary" style="width: 100%;" onclick="executeReadQuery(false)">
+        📖 Прочитать кортежи из OpenFGA (Read API)
+      </button>
 
       <!-- Таблица результатов чтения -->
       <div id="readResultsWrapper" style="display: none; margin-top: 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
@@ -479,7 +484,7 @@
             <span id="readDurationBadge" style="margin-left: 8px; font-size: 0.8rem; color: #64748b; font-family: monospace;"></span>
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
-            <button id="btnReadNextPage" class="tab-btn" style="display: none; height: 28px; padding: 0 12px; font-size: 0.8rem; background: #2563eb; color: #ffffff; font-weight: 600; border-radius: 4px;" onclick="executeReadQuery(true)">
+            <button id="btnReadNextPage" class="primary" style="display: none; padding: 4px 12px; font-size: 0.8rem; height: auto;" onclick="executeReadQuery(true)">
               Следующая страница ➔
             </button>
           </div>
@@ -512,22 +517,22 @@
       </div>
 
       <!-- Быстрые сценарии для записи/удаления -->
-      <div style="margin-bottom: 12px;">
+      <div style="margin-bottom: 14px;">
         <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #475569; font-size: 0.82rem;">Быстрые примеры изменений (нажмите для заполнения формы):</label>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-          <button type="button" class="preset-pill-btn" onclick="applyWritePreset('grant_role')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer; color: #1e293b; font-weight: 600;">
+          <button type="button" class="preset-pill-btn" onclick="applyWritePreset('grant_role')">
             🔑 Назначить роль 34491 (direct_assignee)
           </button>
-          <button type="button" class="preset-pill-btn" onclick="applyWritePreset('add_substitute')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer; color: #1e293b; font-weight: 600;">
+          <button type="button" class="preset-pill-btn" onclick="applyWritePreset('add_substitute')">
             🔄 Добавить замещение: 34491 ➔ 68176 (direct_replaces)
           </button>
-          <button type="button" class="preset-pill-btn" onclick="applyWritePreset('add_division')" style="font-size: 12px; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer; color: #1e293b; font-weight: 600;">
+          <button type="button" class="preset-pill-btn" onclick="applyWritePreset('add_division')">
             🏢 Привязать 34491 к отделу 787 (direct_employee)
           </button>
         </div>
       </div>
 
-      <!-- Форма конструктора кортежа -->
+      <!-- Форма конструктора кортежа: 1-я строка (Субъект и Объект) -->
       <div class="form-grid-top-2" style="margin-bottom: 12px;">
         <!-- Субъект -->
         <div class="form-group" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
@@ -561,26 +566,28 @@
         </div>
       </div>
 
-      <!-- Отношение и кнопки действий -->
-      <div class="form-grid-action" style="grid-template-columns: 1fr auto auto; gap: 10px;">
-        <div class="form-group">
-          <label style="font-weight: 700; font-size: 0.82rem;">3. Отношение (Relation):</label>
-          <select id="writeRelation" onchange="updateLiveRequestPreview()">
-            <option value="direct_assignee">direct_assignee (Прямое назначение роли)</option>
-            <option value="direct_employee">direct_employee (Прямая принадлежность к подразделению)</option>
-            <option value="direct_replaces">direct_replaces (Прямое замещение сотрудника)</option>
-            <option value="direct_substitute">direct_substitute (Прямой замещающий)</option>
-            <option value="parent">parent (Родительское подразделение)</option>
-            <option value="child">child (Дочернее подразделение)</option>
-            <option value="staff">staff (Штатная единица)</option>
-            <option value="profession">profession (Профессия)</option>
-          </select>
-        </div>
-        <button class="primary" style="background: #16a34a; border-color: #15803d;" onclick="executeWriteTuple()">
-          ✏️ Записать кортеж (Write)
+      <!-- Отношение (полная ширина) -->
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label style="font-weight: 700; font-size: 0.82rem;">3. Отношение (Relation):</label>
+        <select id="writeRelation" onchange="updateLiveRequestPreview()">
+          <option value="direct_assignee">direct_assignee (Прямое назначение роли)</option>
+          <option value="direct_employee">direct_employee (Прямая принадлежность к подразделению)</option>
+          <option value="direct_replaces">direct_replaces (Прямое замещение сотрудника)</option>
+          <option value="direct_substitute">direct_substitute (Прямой замещающий)</option>
+          <option value="parent">parent (Родительское подразделение)</option>
+          <option value="child">child (Дочернее подразделение)</option>
+          <option value="staff">staff (Штатная единица)</option>
+          <option value="profession">profession (Профессия)</option>
+        </select>
+      </div>
+
+      <!-- Кнопки действий: 2 равные кнопки в сетке 1fr 1fr -->
+      <div class="form-grid-top-2" style="margin-bottom: 0;">
+        <button type="button" class="btn-write-primary" onclick="executeWriteTuple()">
+          ✏️ Записать кортеж (Write API)
         </button>
-        <button class="tab-btn" style="background: #dc2626; color: #ffffff; border-color: #b91c1c; font-weight: 600;" onclick="executeDeleteTuple()">
-          🗑️ Удалить кортеж (Delete)
+        <button type="button" class="btn-delete-danger" onclick="executeDeleteTuple()">
+          🗑️ Удалить кортеж (Delete API)
         </button>
       </div>
 

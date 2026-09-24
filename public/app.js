@@ -2266,7 +2266,7 @@
           <td><code>${safeObj}</code></td>
           <td style="color: #64748b; font-size: 0.78rem;">${time}</td>
           <td style="text-align: center;">
-            <button type="button" class="tab-btn" style="padding: 2px 6px; font-size: 0.72rem; color: #dc2626; border-color: #fecaca; background: #fef2f2; height: auto;" onclick="deleteTupleFromReadRow('${escapeJs(key.user)}', '${escapeJs(key.relation)}', '${escapeJs(key.object)}')">
+            <button type="button" class="btn-danger-sm" title="Удалить кортеж через Write API" onclick="deleteTupleFromReadRow('${escapeJs(key.user)}', '${escapeJs(key.relation)}', '${escapeJs(key.object)}')">
               🗑️
             </button>
           </td>
