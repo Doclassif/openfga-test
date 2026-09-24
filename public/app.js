@@ -2691,7 +2691,7 @@
         textEl.textContent = "Выполните проверку или поиск выше — здесь отобразится путь, по которому прошел запрос.";
         textEl.style.color = "#94a3b8";
       }
-      drawGraph();
+      switchGraphMode("model");
     }
 
     function updateGraphFromTrace(trace) {
@@ -2701,7 +2701,11 @@
         textEl.innerHTML = trace.summary || "Путь определен";
         textEl.style.color = trace.allowed === false ? "#f87171" : "#38bdf8";
       }
-      drawGraph();
+      if (trace && trace.nodes && trace.nodes.length > 0) {
+        switchGraphMode("entity");
+      } else {
+        drawGraph();
+      }
     }
     window.updateGraphFromTrace = updateGraphFromTrace;
     window.applyGraphTrace = updateGraphFromTrace;
