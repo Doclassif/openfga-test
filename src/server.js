@@ -2,7 +2,7 @@ import http from "node:http";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { check, batchCheck, listObjects, listUsers } from "./client.js";
+import { check, batchCheck, listObjects, listUsers, readTuples, write } from "./client.js";
 import { parseCsv } from "./import.js";
 import { traceResolutionPath } from "./graph-tracer.js";
 
@@ -268,6 +268,41 @@ const server = http.createServer(async (req, res) => {
       const durationMs = Math.round((performance.now() - t0) * 10) / 10;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ items, count: items.length, durationMs }));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // 3.1 Чтение кортежей (Read API)
+  if (req.method === "POST" && url.pathname === "/read") {
+    try {
+      const { tuple_key, tupleKey, page_size, pageSize, continuation_token, continuationToken } = await readBody(req);
+      const key = tuple_key || tupleKey || null;
+      const size = page_size || pageSize || 50;
+      const token = continuation_token || continuationToken || "";
+      const t0 = performance.now();
+      const result = await readTuples(key, size, token);
+      const durationMs = Math.round((performance.now() - t0) * 10) / 10;
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ...result, durationMs }));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // 3.2 Запись и удаление кортежей (Write API)
+  if (req.method === "POST" && url.pathname === "/write") {
+    try {
+      const { writes, deletes } = await readBody(req);
+      const t0 = performance.now();
+      const result = await write(writes, deletes);
+      const durationMs = Math.round((performance.now() - t0) * 10) / 10;
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ...result, durationMs }));
     } catch (err) {
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: err.message }));

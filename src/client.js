@@ -164,7 +164,7 @@ export async function listUsers(objectStr, relation, userType) {
 }
 
 /**
- * Запись кортежей пакетами по 100
+ * Запись кортежей пакетами по 100 (для импорта и массовой синхронизации)
  */
 export async function writeTuples(tuples, targetStoreId = null) {
   const storeId = targetStoreId || await getStoreId();
@@ -191,6 +191,60 @@ export async function writeTuples(tuples, targetStoreId = null) {
     totalWritten += batch.length;
   }
   return totalWritten;
+}
+
+/**
+ * Чтение кортежей из OpenFGA (Read API)
+ * @param {object|null} tupleKey { user, relation, object }
+ * @param {number} pageSize
+ * @param {string} continuationToken
+ */
+export async function readTuples(tupleKey = null, pageSize = 50, continuationToken = "") {
+  const storeId = await getStoreId();
+  const payload = {};
+  if (tupleKey && (tupleKey.user || tupleKey.relation || tupleKey.object)) {
+    payload.tuple_key = tupleKey;
+  }
+  if (pageSize) payload.page_size = pageSize;
+  if (continuationToken) payload.continuation_token = continuationToken;
+
+  const res = await fetch(`${OPENFGA_URL}/stores/${storeId}/read`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Ошибка read: ${errText}`);
+  }
+  return await res.json();
+}
+
+/**
+ * Произвольная запись и удаление кортежей (Write API)
+ * @param {Array} writes Массив объектов { user, relation, object }
+ * @param {Array} deletes Массив объектов { user, relation, object }
+ */
+export async function write(writes = [], deletes = []) {
+  const storeId = await getStoreId();
+  const payload = {};
+  if (writes && writes.length > 0) {
+    payload.writes = { tuple_keys: writes };
+  }
+  if (deletes && deletes.length > 0) {
+    payload.deletes = { tuple_keys: deletes };
+  }
+
+  const res = await fetch(`${OPENFGA_URL}/stores/${storeId}/write`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Ошибка write: ${errText}`);
+  }
+  return { success: true };
 }
 
 /**

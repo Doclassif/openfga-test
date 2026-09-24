@@ -160,6 +160,36 @@ curl -X POST http://localhost:8000/batch-check \
   }'
 ```
 
+### 5. Чтение кортежей (`POST /read`)
+Чтение физических кортежей отношений с фильтрацией или постраничной пагинацией:
+```bash
+curl -X POST http://localhost:8000/read \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tuple_key": {
+      "user": "Employees:34491",
+      "object": "Divisions:"
+    },
+    "page_size": 50
+  }'
+```
+
+### 6. Запись и удаление кортежей (`POST /write`)
+Атомарная запись и отзыв кортежей в OpenFGA ReBAC. Именно этот API используется скриптом `src/import.js` для пакетной загрузки всех **1 466 кортежей** из CSV:
+```bash
+curl -X POST http://localhost:8000/write \
+  -H "Content-Type: application/json" \
+  -d '{
+    "writes": [
+      {
+        "user": "Employees:34491",
+        "relation": "direct_assignee",
+        "object": "Roles:bd38f78f-7ad0-595e-81d6-06b970a7e9c3"
+      }
+    ]
+  }'
+```
+
 ---
 
 ## 🛠️ Скрипты проекта
@@ -168,8 +198,8 @@ curl -X POST http://localhost:8000/batch-check \
 |---|---|
 | `npm start` | Запуск сервера приложений (HTTP API + веб-интерфейс) |
 | `npm run dev` | Запуск сервера в режиме разработки с автоматическим перезапуском (`--watch`) |
-| `npm test` | Запуск полного набора автотестов (`node:test`, 84 проверки) |
-| `npm run import` | Инициализация хранилища OpenFGA, загрузка модели и импорт кортежей из CSV |
+| `npm test` | Запуск полного набора автотестов (`node:test`, 89 проверок) |
+| `npm run import` | Инициализация хранилища OpenFGA, загрузка модели и импорт кортежей из CSV через Write API |
 | `npm run model:json` | Компиляция `model.fga` в AST JSON `model.json` через OpenFGA CLI |
 
 ---

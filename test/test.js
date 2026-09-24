@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { check, batchCheck, listObjects, listUsers } from "../src/client.js";
+import { check, batchCheck, listObjects, listUsers, readTuples, write } from "../src/client.js";
 import { parseCsv } from "../src/import.js";
 import { resolveAccessDetails, traceResolutionPath } from "../src/server.js";
 
@@ -649,6 +649,55 @@ test("18. Replacings Entity: первый класс сущности в OpenFGA
     assert.equal(trace.edges[0].relation, "replacing");
     assert.equal(trace.modelSteps[0].from, "Employees");
     assert.equal(trace.modelSteps[0].to, "Replacings");
+  });
+});
+
+test("19. Read & Write API: нативные методы OpenFGA для чтения и записи кортежей ReBAC", async (t) => {
+  await t.test("READ ALL: Чтение кортежей с пагинацией (первые 10 кортежей)", async () => {
+    const res = await readTuples(null, 10);
+    assert.ok(Array.isArray(res.tuples));
+    assert.equal(res.tuples.length, 10);
+    assert.ok(res.continuation_token !== undefined);
+  });
+
+  await t.test("READ FILTER: Чтение кортежей по конкретному объекту (Divisions:215)", async () => {
+    const res = await readTuples({ object: "Divisions:215" }, 10);
+    assert.ok(Array.isArray(res.tuples));
+    assert.ok(res.tuples.length > 0);
+    for (const t of res.tuples) {
+      assert.equal(t.key.object, "Divisions:215");
+    }
+  });
+
+  await t.test("READ FILTER: Чтение кортежей по пользователю и типу объекта (Employees:34491 в Divisions:)", async () => {
+    const res = await readTuples({ user: "Employees:34491", object: "Divisions:" }, 10);
+    assert.ok(Array.isArray(res.tuples));
+    assert.ok(res.tuples.length >= 1);
+    const hasEmployee = res.tuples.some(t => t.key.user === "Employees:34491" && t.key.relation === "direct_employee" && t.key.object === "Divisions:215");
+    assert.ok(hasEmployee);
+  });
+
+  await t.test("WRITE & DELETE: Запись и удаление произвольного кортежа через Write API", async () => {
+    const testTuple = { user: "Employees:99999", relation: "direct_assignee", object: "Roles:bd38f78f-7ad0-595e-81d6-06b970a7e9c3" };
+    // 1. Проверяем, что права изначально нет
+    const beforeCheck = await check(testTuple.user, testTuple.relation, testTuple.object);
+    assert.equal(beforeCheck, false);
+
+    // 2. Записываем кортеж через write
+    const writeRes = await write([testTuple]);
+    assert.equal(writeRes.success, true);
+
+    // 3. Проверяем, что теперь право есть
+    const afterWriteCheck = await check(testTuple.user, testTuple.relation, testTuple.object);
+    assert.equal(afterWriteCheck, true);
+
+    // 4. Удаляем кортеж через write
+    const deleteRes = await write([], [testTuple]);
+    assert.equal(deleteRes.success, true);
+
+    // 5. Проверяем, что право снова отозвано
+    const afterDeleteCheck = await check(testTuple.user, testTuple.relation, testTuple.object);
+    assert.equal(afterDeleteCheck, false);
   });
 });
 

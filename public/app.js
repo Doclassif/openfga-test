@@ -254,6 +254,49 @@
             }
           }))
         };
+      } else if (currentActiveTab === "read") {
+        endpoint = "/read";
+        pdpRoute = "/stores/{store_id}/read";
+        const objType = document.getElementById("readObjectType")?.value;
+        const objId = document.getElementById("readObjectId")?.value;
+        const usrType = document.getElementById("readUserType")?.value;
+        const usrId = document.getElementById("readUserId")?.value;
+        const rel = document.getElementById("readRelation")?.value?.trim();
+        const pageSize = parseInt(document.getElementById("readPageSize")?.value || "50", 10);
+
+        payload = { page_size: pageSize };
+        const key = {};
+        if (objType) {
+          key.object = objId || `${objType}:`;
+        }
+        if (usrType && usrId) {
+          key.user = usrId;
+        }
+        if (rel) {
+          key.relation = rel;
+        }
+        if (Object.keys(key).length > 0) {
+          payload.tuple_key = key;
+        }
+        if (typeof readContinuationToken !== "undefined" && readContinuationToken) {
+          payload.continuation_token = readContinuationToken;
+        }
+      } else if (currentActiveTab === "write") {
+        endpoint = "/write";
+        pdpRoute = "/stores/{store_id}/write";
+        const usr = document.getElementById("writeSubjectItem")?.value || "Employees:34491";
+        const rel = document.getElementById("writeRelation")?.value || "direct_assignee";
+        const obj = document.getElementById("writeTargetItem")?.value || "Roles:bd38f78f-7ad0-595e-81d6-06b970a7e9c3";
+
+        payload = {
+          writes: [
+            {
+              user: usr,
+              relation: rel,
+              object: obj
+            }
+          ]
+        };
       }
 
       currentPreviewRequest = { endpoint, pdpRoute, payload };
@@ -779,7 +822,7 @@
 
     function switchTab(tab) {
       currentActiveTab = tab;
-      const tabs = ["check", "lookup", "batch"];
+      const tabs = ["check", "lookup", "batch", "read", "write"];
       tabs.forEach(t => {
         const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
         const content = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -788,6 +831,8 @@
       });
 
       if (tab === "batch") renderBatchTable();
+      if (tab === "read") onReadTabActivated();
+      if (tab === "write") onWriteTabActivated();
       updateLiveRequestPreview();
     }
 
@@ -839,6 +884,12 @@
       // Инициализация модуля пакетной проверки (Batch Check)
       initBatchDropdowns();
       renderBatchTable();
+
+      // Инициализация модуля чтения кортежей (Read API)
+      initReadDropdowns();
+
+      // Инициализация модуля записи кортежей (Write API)
+      initWriteDropdowns();
 
       // Таблицы
       renderCurrentTable();
@@ -1968,6 +2019,447 @@
       }
     }
 
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function escapeJs(str) {
+      if (!str) return "";
+      return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    // =========================================================================
+    // МОДУЛЬ 4: ЧТЕНИЕ КОРТЕЖЕЙ (Read API)
+    // =========================================================================
+    let readContinuationToken = "";
+    let readCurrentTuples = [];
+
+    function initReadDropdowns() {
+      onReadObjectTypeChange();
+      onReadUserTypeChange();
+    }
+
+    function onReadTabActivated() {
+      if (readCurrentTuples.length === 0) {
+        executeReadQuery(false);
+      }
+    }
+
+    function onReadObjectTypeChange() {
+      const type = document.getElementById("readObjectType")?.value;
+      const sel = document.getElementById("readObjectId");
+      if (!sel) return;
+      sel.innerHTML = "";
+      if (!type) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "— Все объекты —";
+        sel.appendChild(opt);
+        sel.disabled = true;
+      } else {
+        sel.disabled = false;
+        const anyOpt = document.createElement("option");
+        anyOpt.value = `${type}:`;
+        anyOpt.textContent = `— Все объекты типа ${type} —`;
+        sel.appendChild(anyOpt);
+        populateEntitySelect(sel, type);
+      }
+      updateLiveRequestPreview();
+    }
+
+    function onReadUserTypeChange() {
+      const type = document.getElementById("readUserType")?.value;
+      const sel = document.getElementById("readUserId");
+      if (!sel) return;
+      sel.innerHTML = "";
+      if (!type) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "— Любой пользователь —";
+        sel.appendChild(opt);
+        sel.disabled = true;
+      } else {
+        sel.disabled = false;
+        populateEntitySelect(sel, type);
+      }
+      updateLiveRequestPreview();
+    }
+
+    function applyReadPreset(name) {
+      const objTypeSel = document.getElementById("readObjectType");
+      const objIdSel = document.getElementById("readObjectId");
+      const usrTypeSel = document.getElementById("readUserType");
+      const usrIdSel = document.getElementById("readUserId");
+      const relInput = document.getElementById("readRelation");
+
+      readContinuationToken = "";
+
+      if (name === "all") {
+        if (objTypeSel) objTypeSel.value = "";
+        onReadObjectTypeChange();
+        if (usrTypeSel) usrTypeSel.value = "";
+        onReadUserTypeChange();
+        if (relInput) relInput.value = "";
+      } else if (name === "emp_34491") {
+        if (objTypeSel) objTypeSel.value = "Divisions";
+        onReadObjectTypeChange();
+        if (objIdSel) objIdSel.value = "Divisions:";
+        if (usrTypeSel) usrTypeSel.value = "Employees";
+        onReadUserTypeChange();
+        if (usrIdSel) usrIdSel.value = "Employees:34491";
+        if (relInput) relInput.value = "";
+      } else if (name === "div_215") {
+        if (objTypeSel) objTypeSel.value = "Divisions";
+        onReadObjectTypeChange();
+        if (objIdSel) objIdSel.value = "Divisions:215";
+        if (usrTypeSel) usrTypeSel.value = "";
+        onReadUserTypeChange();
+        if (relInput) relInput.value = "";
+      } else if (name === "roles") {
+        if (objTypeSel) objTypeSel.value = "Roles";
+        onReadObjectTypeChange();
+        if (objIdSel) objIdSel.value = "Roles:";
+        if (usrTypeSel) usrTypeSel.value = "";
+        onReadUserTypeChange();
+        if (relInput) relInput.value = "direct_assignee";
+      } else if (name === "replacings") {
+        if (objTypeSel) objTypeSel.value = "Replacings";
+        onReadObjectTypeChange();
+        if (objIdSel) objIdSel.value = "Replacings:";
+        if (usrTypeSel) usrTypeSel.value = "";
+        onReadUserTypeChange();
+        if (relInput) relInput.value = "";
+      }
+      updateLiveRequestPreview();
+      executeReadQuery(false);
+    }
+
+    async function executeReadQuery(isNextPage = false) {
+      if (!isNextPage) {
+        readContinuationToken = "";
+        readCurrentTuples = [];
+      }
+
+      const objType = document.getElementById("readObjectType")?.value;
+      const objId = document.getElementById("readObjectId")?.value;
+      const usrType = document.getElementById("readUserType")?.value;
+      const usrId = document.getElementById("readUserId")?.value;
+      const rel = document.getElementById("readRelation")?.value?.trim();
+      const pageSize = parseInt(document.getElementById("readPageSize")?.value || "50", 10);
+
+      const payload = { page_size: pageSize };
+      const key = {};
+      if (objType) {
+        key.object = objId || `${objType}:`;
+      }
+      if (usrType && usrId) {
+        key.user = usrId;
+      }
+      if (rel) {
+        key.relation = rel;
+      }
+      if (Object.keys(key).length > 0) {
+        payload.tuple_key = key;
+      }
+      if (readContinuationToken) {
+        payload.continuation_token = readContinuationToken;
+      }
+
+      const endpoint = "/read";
+      showLoading("Чтение кортежей из OpenFGA...", endpoint, payload);
+
+      try {
+        const { data, status } = await safeFetchJson(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        readContinuationToken = data.continuation_token || "";
+        const newTuples = data.tuples || [];
+        if (isNextPage) {
+          readCurrentTuples = readCurrentTuples.concat(newTuples);
+        } else {
+          readCurrentTuples = newTuples;
+        }
+
+        renderReadResultsTable(readCurrentTuples, data.durationMs || 0, readContinuationToken);
+
+        // Инспектор запросов
+        renderJsonInspector(endpoint, payload, status, data);
+        updateLiveRequestPreview();
+
+        // Результат в карточке результата
+        const box = document.getElementById("resultBox");
+        if (box) {
+          box.style.display = "block";
+          box.className = "box banner-info";
+          const checkBar = document.getElementById("resultCheckBar");
+          if (checkBar) checkBar.style.display = "none";
+          const resTitle = document.getElementById("resultTitle");
+          if (resTitle) {
+            resTitle.style.display = "block";
+            resTitle.textContent = `📖 OpenFGA Read API: получено ${readCurrentTuples.length} кортежей`;
+          }
+          const resMeta = document.getElementById("resultMeta");
+          if (resMeta) {
+            resMeta.style.display = "block";
+            resMeta.textContent = `Время выполнения: ${data.durationMs || 0} ms | Токен продолжения: ${readContinuationToken ? "Есть (доступна следующая страница)" : "Конец списка"}`;
+          }
+          const resList = document.getElementById("resultList");
+          if (resList) {
+            resList.style.display = "block";
+            resList.textContent = readCurrentTuples.slice(0, 10).map((t, i) => 
+              `${i + 1}. [${t.key.relation}] ${t.key.user} ➔ ${t.key.object}`
+            ).join("\n") + (readCurrentTuples.length > 10 ? `\n... и еще ${readCurrentTuples.length - 10} кортежей (см. полную таблицу в карточке модуля)` : "");
+          }
+          const explBox = document.getElementById("resultExplanationBox");
+          if (explBox) {
+            explBox.style.display = "none";
+          }
+        }
+      } catch (err) {
+        showError("Ошибка выполнения Read API: " + err.message, endpoint, payload);
+      }
+    }
+
+    function renderReadResultsTable(tuples, durationMs, nextToken) {
+      const wrapper = document.getElementById("readResultsWrapper");
+      const tbody = document.getElementById("readTableBody");
+      const badge = document.getElementById("readTotalCountBadge");
+      const durBadge = document.getElementById("readDurationBadge");
+      const nextBtn = document.getElementById("btnReadNextPage");
+
+      if (!wrapper || !tbody) return;
+      wrapper.style.display = "block";
+      tbody.innerHTML = "";
+
+      if (badge) badge.textContent = String(tuples.length);
+      if (durBadge) durBadge.textContent = `${durationMs} ms`;
+      if (nextBtn) nextBtn.style.display = nextToken ? "inline-block" : "none";
+
+      if (tuples.length === 0) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="6" style="text-align: center; color: #94a3b8; padding: 18px;">По заданному фильтру кортежей не найдено.</td>`;
+        tbody.appendChild(tr);
+        return;
+      }
+
+      tuples.forEach((t, idx) => {
+        const tr = document.createElement("tr");
+        const key = t.key || {};
+        const safeUser = escapeHtml(key.user || "");
+        const safeRel = escapeHtml(key.relation || "");
+        const safeObj = escapeHtml(key.object || "");
+        const time = t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : "—";
+
+        tr.innerHTML = `
+          <td style="text-align: center; color: #94a3b8;">${idx + 1}</td>
+          <td><strong>${safeUser}</strong></td>
+          <td><span class="badge-method badge-allow-pill" style="font-size: 0.76rem; background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">${safeRel}</span></td>
+          <td><code>${safeObj}</code></td>
+          <td style="color: #64748b; font-size: 0.78rem;">${time}</td>
+          <td style="text-align: center;">
+            <button type="button" class="tab-btn" style="padding: 2px 6px; font-size: 0.72rem; color: #dc2626; border-color: #fecaca; background: #fef2f2; height: auto;" onclick="deleteTupleFromReadRow('${escapeJs(key.user)}', '${escapeJs(key.relation)}', '${escapeJs(key.object)}')">
+              🗑️
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteTupleFromReadRow(user, relation, object) {
+      if (!confirm(`Удалить кортеж из OpenFGA ReBAC?\n\n${user} —[ ${relation} ]—> ${object}`)) {
+        return;
+      }
+      const endpoint = "/write";
+      const payload = { deletes: [{ user, relation, object }] };
+      showLoading("Удаление кортежа через Write API...", endpoint, payload);
+      try {
+        const { data, status } = await safeFetchJson(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        showToast("✓ Кортеж успешно удален через OpenFGA Write API!");
+        renderJsonInspector(endpoint, payload, status, data);
+        executeReadQuery(false);
+      } catch (err) {
+        showError("Ошибка при удалении кортежа: " + err.message, endpoint, payload);
+      }
+    }
+
+    // =========================================================================
+    // МОДУЛЬ 5: ЗАПИСЬ И УДАЛЕНИЕ КОРТЕЖЕЙ (Write API)
+    // =========================================================================
+    function initWriteDropdowns() {
+      onWriteSubjectTypeChange();
+      onWriteTargetTypeChange();
+    }
+
+    function onWriteTabActivated() {
+      updateLiveRequestPreview();
+    }
+
+    function onWriteSubjectTypeChange() {
+      const type = document.getElementById("writeSubjectType")?.value || "Employees";
+      const sel = document.getElementById("writeSubjectItem");
+      if (!sel) return;
+      populateEntitySelect(sel, type, "Employees:34491");
+      updateLiveRequestPreview();
+    }
+
+    function onWriteTargetTypeChange() {
+      const type = document.getElementById("writeTargetType")?.value || "Roles";
+      const sel = document.getElementById("writeTargetItem");
+      if (!sel) return;
+      populateEntitySelect(sel, type);
+      updateLiveRequestPreview();
+    }
+
+    function applyWritePreset(preset) {
+      const subTypeSel = document.getElementById("writeSubjectType");
+      const subItemSel = document.getElementById("writeSubjectItem");
+      const targetTypeSel = document.getElementById("writeTargetType");
+      const targetItemSel = document.getElementById("writeTargetItem");
+      const relSel = document.getElementById("writeRelation");
+
+      if (preset === "grant_role") {
+        if (subTypeSel) subTypeSel.value = "Employees";
+        onWriteSubjectTypeChange();
+        if (subItemSel) subItemSel.value = "Employees:34491";
+
+        if (targetTypeSel) targetTypeSel.value = "Roles";
+        onWriteTargetTypeChange();
+        if (targetItemSel && targetItemSel.options.length > 0) targetItemSel.selectedIndex = 0;
+
+        if (relSel) relSel.value = "direct_assignee";
+      } else if (preset === "add_substitute") {
+        if (subTypeSel) subTypeSel.value = "Employees";
+        onWriteSubjectTypeChange();
+        if (subItemSel) subItemSel.value = "Employees:34491";
+
+        if (targetTypeSel) targetTypeSel.value = "Employees";
+        onWriteTargetTypeChange();
+        if (targetItemSel) targetItemSel.value = "Employees:68176";
+
+        if (relSel) relSel.value = "direct_replaces";
+      } else if (preset === "add_division") {
+        if (subTypeSel) subTypeSel.value = "Employees";
+        onWriteSubjectTypeChange();
+        if (subItemSel) subItemSel.value = "Employees:34491";
+
+        if (targetTypeSel) targetTypeSel.value = "Divisions";
+        onWriteTargetTypeChange();
+        if (targetItemSel) targetItemSel.value = "Divisions:787";
+
+        if (relSel) relSel.value = "direct_employee";
+      }
+
+      updateLiveRequestPreview();
+    }
+
+    async function executeWriteTuple() {
+      const user = document.getElementById("writeSubjectItem")?.value;
+      const relation = document.getElementById("writeRelation")?.value;
+      const object = document.getElementById("writeTargetItem")?.value;
+
+      if (!user || !relation || !object) {
+        showError("Заполните все поля кортежа (User, Relation, Object)");
+        return;
+      }
+
+      const endpoint = "/write";
+      const payload = {
+        writes: [{ user, relation, object }]
+      };
+
+      showLoading("Запись кортежа в OpenFGA (Write API)...", endpoint, payload);
+
+      try {
+        const { data, status } = await safeFetchJson(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        // Карточка статуса записи
+        const card = document.getElementById("writeStatusCard");
+        const title = document.getElementById("writeStatusTitle");
+        const desc = document.getElementById("writeStatusDesc");
+        if (card && title && desc) {
+          card.style.display = "block";
+          card.style.borderColor = "#86efac";
+          card.style.background = "#f0fdf4";
+          title.style.color = "#15803d";
+          title.textContent = `✓ Кортеж успешно записан в OpenFGA ReBAC!`;
+          desc.innerHTML = `<strong>${escapeHtml(user)}</strong> —[ <code>${escapeHtml(relation)}</code> ]—> <strong>${escapeHtml(object)}</strong><br>Время записи: ${data.durationMs || 0} ms. Теперь вы можете сразу проверить это право во вкладке <strong>Check</strong>!`;
+        }
+
+        renderJsonInspector(endpoint, payload, status, data);
+        updateLiveRequestPreview();
+        showToast("✓ Кортеж записан в OpenFGA ReBAC!");
+      } catch (err) {
+        showError("Ошибка записи кортежа: " + err.message, endpoint, payload);
+      }
+    }
+
+    async function executeDeleteTuple() {
+      const user = document.getElementById("writeSubjectItem")?.value;
+      const relation = document.getElementById("writeRelation")?.value;
+      const object = document.getElementById("writeTargetItem")?.value;
+
+      if (!user || !relation || !object) {
+        showError("Заполните все поля кортежа (User, Relation, Object)");
+        return;
+      }
+
+      if (!confirm(`Удалить данный кортеж из OpenFGA?\n\n${user} —[ ${relation} ]—> ${object}`)) {
+        return;
+      }
+
+      const endpoint = "/write";
+      const payload = {
+        deletes: [{ user, relation, object }]
+      };
+
+      showLoading("Удаление кортежа из OpenFGA (Write API)...", endpoint, payload);
+
+      try {
+        const { data, status } = await safeFetchJson(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        // Карточка статуса записи
+        const card = document.getElementById("writeStatusCard");
+        const title = document.getElementById("writeStatusTitle");
+        const desc = document.getElementById("writeStatusDesc");
+        if (card && title && desc) {
+          card.style.display = "block";
+          card.style.borderColor = "#fca5a5";
+          card.style.background = "#fef2f2";
+          title.style.color = "#b91c1c";
+          title.textContent = `✓ Кортеж успешно удален из OpenFGA ReBAC!`;
+          desc.innerHTML = `Удален: <strong>${escapeHtml(user)}</strong> —[ <code>${escapeHtml(relation)}</code> ]—> <strong>${escapeHtml(object)}</strong><br>Время операции: ${data.durationMs || 0} ms.`;
+        }
+
+        renderJsonInspector(endpoint, payload, status, data);
+        updateLiveRequestPreview();
+        showToast("✓ Кортеж удален из OpenFGA ReBAC!");
+      } catch (err) {
+        showError("Ошибка удаления кортежа: " + err.message, endpoint, payload);
+      }
+    }
+
     async function runPresetBatchCheck() {
       switchTab("batch");
       loadBatchScenario("default");
@@ -2188,6 +2680,8 @@
         if (endpoint === "/list-objects") pdpRoute = "/stores/{store_id}/list-objects";
         else if (endpoint === "/list-users") pdpRoute = "/stores/{store_id}/list-users";
         else if (endpoint === "/batch-check") pdpRoute = "/stores/{store_id}/batch-check";
+        else if (endpoint === "/read") pdpRoute = "/stores/{store_id}/read";
+        else if (endpoint === "/write") pdpRoute = "/stores/{store_id}/write";
         reqPdpBadge.textContent = `OpenFGA: POST ${pdpRoute}`;
       }
 
