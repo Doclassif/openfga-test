@@ -284,18 +284,18 @@
       } else if (currentActiveTab === "write") {
         endpoint = "/write";
         pdpRoute = "/stores/{store_id}/write";
-        const usr = document.getElementById("writeSubjectItem")?.value || "Employees:34491";
-        const rel = document.getElementById("writeRelation")?.value || "direct_assignee";
-        const obj = document.getElementById("writeTargetItem")?.value || "Roles:bd38f78f-7ad0-595e-81d6-06b970a7e9c3";
+        const usr = document.getElementById("writeSubjectItem")?.value || "";
+        const rel = document.getElementById("writeRelation")?.value || "";
+        const obj = document.getElementById("writeTargetItem")?.value || "";
 
         payload = {
-          writes: [
+          writes: (usr && rel && obj) ? [
             {
               user: usr,
               relation: rel,
               object: obj
             }
-          ]
+          ] : []
         };
       }
 
@@ -2035,6 +2035,58 @@
     }
 
     // =========================================================================
+    // СХЕМА ДОПУСТИМЫХ ОТНОШЕНИЙ ДЛЯ ЗАПИСИ И ЧТЕНИЯ (OpenFGA Schema)
+    // =========================================================================
+    const WRITABLE_SCHEMA = {
+      Professions: {
+        direct_employee: { users: ["Employees"], label: "direct_employee (Сотрудник данной профессии)" },
+        staff: { users: ["Staffs"], label: "staff (Штатная единица данной профессии)" }
+      },
+      Divisions: {
+        direct_employee: { users: ["Employees"], label: "direct_employee (Сотрудник подразделения)" },
+        direct_staff: { users: ["Staffs"], label: "direct_staff (Штатная единица подразделения)" },
+        parent: { users: ["Divisions"], label: "parent (Родительское подразделение)" },
+        child: { users: ["Divisions"], label: "child (Дочернее подразделение)" }
+      },
+      Staffs: {
+        direct_employee: { users: ["Employees"], label: "direct_employee (Сотрудник на штатной единице)" },
+        direct_division: { users: ["Divisions"], label: "direct_division (Подразделение штатной единицы)" },
+        profession: { users: ["Professions"], label: "profession (Профессия штатной единицы)" }
+      },
+      Employees: {
+        direct_replaces: { users: ["Employees"], label: "direct_replaces (Кого замещает данный сотрудник)" },
+        direct_substitute: { users: ["Employees"], label: "direct_substitute (Кто замещает данного сотрудника)" },
+        direct_division: { users: ["Divisions"], label: "direct_division (Подразделение сотрудника)" },
+        direct_staff: { users: ["Staffs"], label: "direct_staff (Штатная единица сотрудника)" },
+        direct_profession: { users: ["Professions"], label: "direct_profession (Профессия сотрудника)" },
+        direct_role: { users: ["Roles"], label: "direct_role (Роль, назначенная сотруднику)" },
+        replacing_record: { users: ["Replacings"], label: "replacing_record (Привязка к записи о замещении)" }
+      },
+      Roles: {
+        direct_assignee: { users: ["Employees"], label: "direct_assignee (Прямое назначение роли сотруднику)" },
+        division_assignee: { users: ["Divisions"], label: "division_assignee (Назначение роли подразделению)" },
+        staff_assignee: { users: ["Staffs"], label: "staff_assignee (Назначение роли штатной единице)" }
+      },
+      Replacings: {
+        replaced: { users: ["Employees"], label: "replaced (Замещаемый сотрудник)" },
+        replacing: { users: ["Employees"], label: "replacing (Замещающий сотрудник)" },
+        staff: { users: ["Staffs"], label: "staff (Штатная единица замещения)" }
+      }
+    };
+
+    function getWritableRelations(subjectType, targetType) {
+      const targetConfig = WRITABLE_SCHEMA[targetType];
+      if (!targetConfig) return [];
+      const result = [];
+      for (const [relKey, relInfo] of Object.entries(targetConfig)) {
+        if (!subjectType || relInfo.users.includes(subjectType)) {
+          result.push({ key: relKey, label: relInfo.label });
+        }
+      }
+      return result;
+    }
+
+    // =========================================================================
     // МОДУЛЬ 4: ЧТЕНИЕ КОРТЕЖЕЙ (Read API)
     // =========================================================================
     let readContinuationToken = "";
@@ -2043,49 +2095,108 @@
     function initReadDropdowns() {
       onReadObjectTypeChange();
       onReadUserTypeChange();
+      updateReadRelations();
     }
 
     function onReadTabActivated() {
       updateLiveRequestPreview();
     }
 
+    function updateReadRelations(preferredRelation = null) {
+      const objType = document.getElementById("readObjectType")?.value;
+      const usrType = document.getElementById("readUserType")?.value;
+      const relSel = document.getElementById("readRelation");
+      if (!relSel) return;
+
+      const currentVal = preferredRelation !== null ? preferredRelation : (relSel.value || "");
+      relSel.innerHTML = "";
+
+      const anyOpt = document.createElement("option");
+      anyOpt.value = "";
+      anyOpt.textContent = "— Любое отношение (без фильтра) —";
+      relSel.appendChild(anyOpt);
+
+      let available = [];
+      if (objType) {
+        available = getWritableRelations(usrType, objType);
+      } else if (usrType) {
+        const seen = new Set();
+        for (const [targetType, targetConfig] of Object.entries(WRITABLE_SCHEMA)) {
+          for (const [relKey, relInfo] of Object.entries(targetConfig)) {
+            if (relInfo.users.includes(usrType) && !seen.has(relKey)) {
+              seen.add(relKey);
+              available.push({ key: relKey, label: `${relKey} (${targetType})` });
+            }
+          }
+        }
+      } else {
+        const seen = new Set();
+        for (const [targetType, targetConfig] of Object.entries(WRITABLE_SCHEMA)) {
+          for (const [relKey, relInfo] of Object.entries(targetConfig)) {
+            if (!seen.has(relKey)) {
+              seen.add(relKey);
+              available.push({ key: relKey, label: relInfo.label });
+            }
+          }
+        }
+      }
+
+      available.forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r.key;
+        opt.textContent = r.label;
+        relSel.appendChild(opt);
+      });
+
+      if (currentVal && Array.from(relSel.options).some(o => o.value === currentVal)) {
+        relSel.value = currentVal;
+      } else {
+        relSel.value = "";
+      }
+      updateLiveRequestPreview();
+    }
+
     function onReadObjectTypeChange() {
       const type = document.getElementById("readObjectType")?.value;
       const sel = document.getElementById("readObjectId");
-      if (!sel) return;
-      sel.innerHTML = "";
-      if (!type) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "— Все объекты —";
-        sel.appendChild(opt);
-        sel.disabled = true;
-      } else {
-        sel.disabled = false;
-        const anyOpt = document.createElement("option");
-        anyOpt.value = `${type}:`;
-        anyOpt.textContent = `— Все объекты типа ${type} —`;
-        sel.appendChild(anyOpt);
-        populateEntitySelect(sel, type);
+      if (sel) {
+        sel.innerHTML = "";
+        if (!type) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "— Все объекты —";
+          sel.appendChild(opt);
+          sel.disabled = true;
+        } else {
+          sel.disabled = false;
+          const anyOpt = document.createElement("option");
+          anyOpt.value = `${type}:`;
+          anyOpt.textContent = `— Все объекты типа ${type} —`;
+          sel.appendChild(anyOpt);
+          populateEntitySelect(sel, type);
+        }
       }
+      updateReadRelations();
       updateLiveRequestPreview();
     }
 
     function onReadUserTypeChange() {
       const type = document.getElementById("readUserType")?.value;
       const sel = document.getElementById("readUserId");
-      if (!sel) return;
-      sel.innerHTML = "";
-      if (!type) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "— Любой пользователь —";
-        sel.appendChild(opt);
-        sel.disabled = true;
-      } else {
-        sel.disabled = false;
-        populateEntitySelect(sel, type);
+      if (sel) {
+        sel.innerHTML = "";
+        if (!type) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "— Любой пользователь —";
+          sel.appendChild(opt);
+          sel.disabled = true;
+        } else {
+          sel.disabled = false;
+          populateEntitySelect(sel, type);
+        }
       }
+      updateReadRelations();
       updateLiveRequestPreview();
     }
 
@@ -2094,7 +2205,6 @@
       const objIdSel = document.getElementById("readObjectId");
       const usrTypeSel = document.getElementById("readUserType");
       const usrIdSel = document.getElementById("readUserId");
-      const relInput = document.getElementById("readRelation");
 
       readContinuationToken = "";
 
@@ -2103,7 +2213,7 @@
         onReadObjectTypeChange();
         if (usrTypeSel) usrTypeSel.value = "";
         onReadUserTypeChange();
-        if (relInput) relInput.value = "";
+        updateReadRelations("");
       } else if (name === "emp_34491") {
         if (objTypeSel) objTypeSel.value = "Divisions";
         onReadObjectTypeChange();
@@ -2111,28 +2221,32 @@
         if (usrTypeSel) usrTypeSel.value = "Employees";
         onReadUserTypeChange();
         if (usrIdSel) usrIdSel.value = "Employees:34491";
-        if (relInput) relInput.value = "";
+        updateReadRelations("");
       } else if (name === "div_215") {
         if (objTypeSel) objTypeSel.value = "Divisions";
         onReadObjectTypeChange();
         if (objIdSel) objIdSel.value = "Divisions:215";
         if (usrTypeSel) usrTypeSel.value = "";
         onReadUserTypeChange();
-        if (relInput) relInput.value = "";
+        updateReadRelations("");
       } else if (name === "roles") {
         if (objTypeSel) objTypeSel.value = "Roles";
         onReadObjectTypeChange();
-        if (objIdSel) objIdSel.value = "Roles:";
+        if (objIdSel && objIdSel.options.length > 1) {
+          objIdSel.selectedIndex = 1;
+        }
         if (usrTypeSel) usrTypeSel.value = "";
         onReadUserTypeChange();
-        if (relInput) relInput.value = "direct_assignee";
+        updateReadRelations("direct_assignee");
       } else if (name === "replacings") {
         if (objTypeSel) objTypeSel.value = "Replacings";
         onReadObjectTypeChange();
-        if (objIdSel) objIdSel.value = "Replacings:";
+        if (objIdSel && objIdSel.options.length > 1) {
+          objIdSel.selectedIndex = 1;
+        }
         if (usrTypeSel) usrTypeSel.value = "";
         onReadUserTypeChange();
-        if (relInput) relInput.value = "";
+        updateReadRelations("");
       }
       updateLiveRequestPreview();
     }
@@ -2161,6 +2275,13 @@
       if (rel) {
         key.relation = rel;
       }
+
+      // Валидация OpenFGA Read API: нельзя оставлять пустыми одновременно object id и user
+      if (!key.user && key.object && key.object.endsWith(":")) {
+        showError("В OpenFGA Read API при поиске по типу объекта необходимо либо выбрать конкретный объект из списка (например, конкретную роль), либо указать конкретного пользователя.");
+        return;
+      }
+
       if (Object.keys(key).length > 0) {
         payload.tuple_key = key;
       }
@@ -2299,6 +2420,7 @@
     function initWriteDropdowns() {
       onWriteSubjectTypeChange();
       onWriteTargetTypeChange();
+      updateWriteRelations("direct_assignee");
     }
 
     function onWriteTabActivated() {
@@ -2308,16 +2430,54 @@
     function onWriteSubjectTypeChange() {
       const type = document.getElementById("writeSubjectType")?.value || "Employees";
       const sel = document.getElementById("writeSubjectItem");
-      if (!sel) return;
-      populateEntitySelect(sel, type, "Employees:34491");
-      updateLiveRequestPreview();
+      if (sel) populateEntitySelect(sel, type, "Employees:34491");
+      updateWriteRelations();
     }
 
     function onWriteTargetTypeChange() {
       const type = document.getElementById("writeTargetType")?.value || "Roles";
       const sel = document.getElementById("writeTargetItem");
-      if (!sel) return;
-      populateEntitySelect(sel, type);
+      if (sel) populateEntitySelect(sel, type);
+      updateWriteRelations();
+    }
+
+    function updateWriteRelations(preferredRelation = null) {
+      const subType = document.getElementById("writeSubjectType")?.value;
+      const targetType = document.getElementById("writeTargetType")?.value;
+      const relSel = document.getElementById("writeRelation");
+      const writeBtn = document.querySelector(".btn-write-primary");
+      const delBtn = document.querySelector(".btn-delete-danger");
+      if (!relSel) return;
+
+      const validRelations = getWritableRelations(subType, targetType);
+      relSel.innerHTML = "";
+
+      if (validRelations.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = `— Нет допустимых отношений между ${subType} и ${targetType} —`;
+        relSel.appendChild(opt);
+        relSel.disabled = true;
+        if (writeBtn) writeBtn.disabled = true;
+        if (delBtn) delBtn.disabled = true;
+      } else {
+        relSel.disabled = false;
+        if (writeBtn) writeBtn.disabled = false;
+        if (delBtn) delBtn.disabled = false;
+
+        validRelations.forEach(r => {
+          const opt = document.createElement("option");
+          opt.value = r.key;
+          opt.textContent = r.label;
+          relSel.appendChild(opt);
+        });
+
+        if (preferredRelation && validRelations.some(r => r.key === preferredRelation)) {
+          relSel.value = preferredRelation;
+        } else {
+          relSel.selectedIndex = 0;
+        }
+      }
       updateLiveRequestPreview();
     }
 
@@ -2326,7 +2486,6 @@
       const subItemSel = document.getElementById("writeSubjectItem");
       const targetTypeSel = document.getElementById("writeTargetType");
       const targetItemSel = document.getElementById("writeTargetItem");
-      const relSel = document.getElementById("writeRelation");
 
       if (preset === "grant_role") {
         if (subTypeSel) subTypeSel.value = "Employees";
@@ -2337,7 +2496,7 @@
         onWriteTargetTypeChange();
         if (targetItemSel && targetItemSel.options.length > 0) targetItemSel.selectedIndex = 0;
 
-        if (relSel) relSel.value = "direct_assignee";
+        updateWriteRelations("direct_assignee");
       } else if (preset === "add_substitute") {
         if (subTypeSel) subTypeSel.value = "Employees";
         onWriteSubjectTypeChange();
@@ -2347,7 +2506,7 @@
         onWriteTargetTypeChange();
         if (targetItemSel) targetItemSel.value = "Employees:68176";
 
-        if (relSel) relSel.value = "direct_replaces";
+        updateWriteRelations("direct_replaces");
       } else if (preset === "add_division") {
         if (subTypeSel) subTypeSel.value = "Employees";
         onWriteSubjectTypeChange();
@@ -2357,7 +2516,7 @@
         onWriteTargetTypeChange();
         if (targetItemSel) targetItemSel.value = "Divisions:787";
 
-        if (relSel) relSel.value = "direct_employee";
+        updateWriteRelations("direct_employee");
       }
 
       updateLiveRequestPreview();
@@ -2369,7 +2528,7 @@
       const object = document.getElementById("writeTargetItem")?.value;
 
       if (!user || !relation || !object) {
-        showError("Заполните все поля кортежа (User, Relation, Object)");
+        showError("Заполните все поля кортежа (User, Relation, Object). Убедитесь, что для выбранных типов есть допустимое отношение в схеме OpenFGA.");
         return;
       }
 
@@ -2414,7 +2573,7 @@
       const object = document.getElementById("writeTargetItem")?.value;
 
       if (!user || !relation || !object) {
-        showError("Заполните все поля кортежа (User, Relation, Object)");
+        showError("Заполните все поля кортежа (User, Relation, Object). Убедитесь, что для выбранных типов есть допустимое отношение в схеме OpenFGA.");
         return;
       }
 

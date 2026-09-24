@@ -459,7 +459,7 @@
       <div class="form-grid-top-2" style="margin-bottom: 14px;">
         <div class="form-group">
           <label style="font-weight: 700; font-size: 0.82rem;">3. Отношение (Relation filter, опционально):</label>
-          <input type="text" id="readRelation" placeholder="Оставьте пустым (любое) или введите отношение (напр. direct_employee)" oninput="updateLiveRequestPreview()">
+          <select id="readRelation" onchange="updateLiveRequestPreview()"></select>
         </div>
         <div class="form-group">
           <label style="font-weight: 700; font-size: 0.82rem;">4. Лимит на страницу (Page size):</label>
@@ -569,16 +569,7 @@
       <!-- Отношение (полная ширина) -->
       <div class="form-group" style="margin-bottom: 14px;">
         <label style="font-weight: 700; font-size: 0.82rem;">3. Отношение (Relation):</label>
-        <select id="writeRelation" onchange="updateLiveRequestPreview()">
-          <option value="direct_assignee">direct_assignee (Прямое назначение роли)</option>
-          <option value="direct_employee">direct_employee (Прямая принадлежность к подразделению)</option>
-          <option value="direct_replaces">direct_replaces (Прямое замещение сотрудника)</option>
-          <option value="direct_substitute">direct_substitute (Прямой замещающий)</option>
-          <option value="parent">parent (Родительское подразделение)</option>
-          <option value="child">child (Дочернее подразделение)</option>
-          <option value="staff">staff (Штатная единица)</option>
-          <option value="profession">profession (Профессия)</option>
-        </select>
+        <select id="writeRelation" onchange="updateLiveRequestPreview()"></select>
       </div>
 
       <!-- Кнопки действий: 2 равные кнопки в сетке 1fr 1fr -->
